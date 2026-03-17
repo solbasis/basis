@@ -489,6 +489,22 @@ hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
 ════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-export">
 <div class="page-hdr"><div><div class="page-title">> Export</div><div class="page-desc">Download your collection as ZIP with images + metadata</div></div></div>
+
+<!-- Size estimator panel -->
+<div class="panel" id="expEstPanel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Size Estimator</div></div><div class="psts" id="expEstSts">—</div></div>
+  <div class="kv" id="expEstKV">
+    <div class="kv-row"><span class="kv-k">Collection</span><span class="kv-v" id="estItems">0 items</span></div>
+    <div class="kv-row"><span class="kv-k">Format</span><span class="kv-v" id="estFmt">—</span></div>
+    <div class="kv-row"><span class="kv-k">Image Size</span><span class="kv-v" id="estImgSize">—</span></div>
+    <div class="kv-row"><span class="kv-k">Est. per image</span><span class="kv-v" id="estPerImg">—</span></div>
+    <div class="kv-row"><span class="kv-k">Est. ZIP size</span><span class="kv-v" id="estTotal" style="font-size:.72rem">—</span></div>
+  </div>
+  <div class="status-bar" id="estWarning" style="margin-top:8px"></div>
+  <div id="estRecommendation" style="margin-top:8px;display:none;padding:8px 10px;border-radius:var(--r-sm);background:rgba(120,177,90,.06);border:1px solid var(--border);font-size:.64rem;color:var(--text-dim);line-height:1.6"></div>
+</div>
+
+<!-- Export controls -->
 <div class="panel">
   <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Export</div></div><div class="psts" id="expSts">Ready</div></div>
   <div class="btn-row" style="margin-top:0">
@@ -588,6 +604,7 @@ function nav(p){
   document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===`page-${p}`));
   if(p==='rarity')renderRarity();
   if(p==='generate'||p==='preview')updateStats();
+  if(p==='export'&&typeof updateEstimator==='function')updateEstimator();
 }
 document.querySelectorAll('.nav-item,.m-tab').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.page)));
 
@@ -941,204 +958,189 @@ $('exportZipBtn').onclick=async()=>{await doExport('full')};
 $('exportMetaBtn').onclick=async()=>{await doExport('meta')};
 $('exportImgBtn').onclick=async()=>{await doExport('img')};
 
-/*
- * CHUNKED STREAMING ZIP BUILDER
- * 
- * Writes ZIP entries in batches. Every FLUSH_EVERY files, the accumulated
- * local file data is flushed into an intermediate Blob and the parts array
- * is cleared. This caps memory at ~FLUSH_EVERY images worth of data.
- * 
- * At the end, all intermediate Blobs + central directory + EOCD are
- * concatenated into the final Blob in one pass.
- */
-const FLUSH_EVERY = 50;
+/* ══════════════════════════════════════
+   EXPORT ENGINE — Professional Web Export
+   
+   Strategy:
+   - Estimates ZIP size BEFORE export starts
+   - Recommends optimal format if PNG would exceed browser limit
+   - Uses custom StreamZip (STORE, no JSZip) for speed
+   - Flushes memory every 50 files
+   - Auto-splits ONLY when absolutely necessary (>1.8GB)
+   - Shows real estimated time remaining
+══════════════════════════════════════ */
+const FLUSH_N=50;
+const MAX_BLOB=1.8*1024*1024*1024;
 
-class StreamZip {
+// Per-image size estimates (bytes) based on format + resolution
+function estImageSize(fmt,px){
+  if(fmt==='png')  return px*px*0.65;
+  if(fmt==='jpeg') return px*px*0.12;
+  return px*px*0.10; // webp
+}
+
+// Update size estimator whenever user navigates to export page
+function updateEstimator(){
+  if(!GEN.length){$('estItems').textContent='0 items';$('estFmt').textContent='—';$('estImgSize').textContent='—';$('estPerImg').textContent='—';$('estTotal').textContent='—';$('expEstSts').textContent='—';hideSt('estWarning');$('estRecommendation').style.display='none';return}
+  const fmt=$('cFmt').value;
+  const px=parseInt($('cImgSize').value)||1024;
+  const n=GEN.length;
+  const perImg=estImageSize(fmt,px);
+  const totalBytes=perImg*n;
+  const totalMB=totalBytes/(1024*1024);
+  const totalGB=totalMB/1024;
+
+  $('estItems').textContent=`${n.toLocaleString()} items`;
+  $('estFmt').textContent=fmt.toUpperCase();
+  $('estImgSize').textContent=`${px}×${px}`;
+  $('estPerImg').textContent=perImg>1024*1024?`~${(perImg/(1024*1024)).toFixed(1)} MB`:`~${(perImg/1024).toFixed(0)} KB`;
+  $('estTotal').textContent=totalGB>=1?`~${totalGB.toFixed(1)} GB`:`~${Math.round(totalMB)} MB`;
+
+  if(totalBytes>MAX_BLOB){
+    $('expEstSts').textContent='TOO LARGE';
+    $('estTotal').style.color='var(--neg)';
+    const webpSize=estImageSize('webp',px)*n;
+    const jpegSize=estImageSize('jpeg',px)*n;
+    const webpMB=Math.round(webpSize/(1024*1024));
+    const jpegMB=Math.round(jpegSize/(1024*1024));
+    const parts=Math.ceil(totalBytes/MAX_BLOB);
+    
+    if(fmt==='png'){
+      showSt('estWarning',`PNG at ${px}px × ${n.toLocaleString()} items = ~${totalGB.toFixed(1)} GB — exceeds the browser\'s ~1.8GB download limit.`,'warn');
+      $('estRecommendation').style.display='block';
+      $('estRecommendation').innerHTML=`<strong style="color:var(--a)">Recommendations:</strong><br>
+        • <strong>Switch to WebP</strong> (Layers page → Format) → estimated <strong style="color:var(--pos)">${webpMB} MB</strong> — same visual quality, 10× smaller<br>
+        • <strong>Switch to JPEG</strong> → estimated <strong style="color:var(--pos)">${jpegMB} MB</strong> — great quality at 95%<br>
+        • <strong>Reduce to 512×512</strong> → cuts size by ~4×<br>
+        • <strong>Export anyway</strong> → will auto-split into ${parts} ZIP parts`;
+    }else{
+      showSt('estWarning',`~${totalGB.toFixed(1)} GB exceeds browser limit. Will auto-split into ${parts} parts.`,'warn');
+      $('estRecommendation').style.display='none';
+    }
+  }else{
+    $('expEstSts').textContent='OK';
+    $('estTotal').style.color='var(--pos)';
+    hideSt('estWarning');
+    $('estRecommendation').style.display='none';
+  }
+}
+
+// Estimator updates when navigating to export page (handled in nav function)
+
+class StreamZip{
   constructor(){
-    this.blobs=[];       // flushed intermediate Blobs
-    this.parts=[];       // current unflushed parts
-    this.centralDir=[];  // central directory entries (small, kept in memory)
-    this.offset=0;
-    this.count=0;
-    this._time=null;
-    this._date=null;
+    this.blobs=[];this.parts=[];this.centralDir=[];this.offset=0;this.count=0;this.dataSize=0;
     const d=new Date();
     this._time=((d.getHours()&0x1f)<<11)|((d.getMinutes()&0x3f)<<5)|((d.getSeconds()>>1)&0x1f);
     this._date=(((d.getFullYear()-1980)&0x7f)<<9)|((d.getMonth()+1)<<5)|(d.getDate()&0x1f);
-    // CRC32 table
     const t=new Uint32Array(256);
     for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c}
-    this._crcTable=t;
+    this._t=t;
   }
-
-  _crc32(u8){
-    let crc=0xFFFFFFFF;
-    const t=this._crcTable;
-    for(let i=0;i<u8.length;i++) crc=t[(crc^u8[i])&0xFF]^(crc>>>8);
-    return (crc^0xFFFFFFFF)>>>0;
+  _crc(u8){let c=0xFFFFFFFF;const t=this._t;for(let i=0;i<u8.length;i++)c=t[(c^u8[i])&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+  addFile(name,data){
+    const nb=new TextEncoder().encode(name);
+    const u8=data instanceof ArrayBuffer?new Uint8Array(data):data instanceof Uint8Array?data:new TextEncoder().encode(data);
+    const crc=this._crc(u8),sz=u8.length,lo=this.offset;
+    const lh=new Uint8Array(30);const lv=new DataView(lh.buffer);
+    lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint16(8,0,true);
+    lv.setUint16(10,this._time,true);lv.setUint16(12,this._date,true);
+    lv.setUint32(14,crc,true);lv.setUint32(18,sz,true);lv.setUint32(22,sz,true);lv.setUint16(26,nb.length,true);
+    this.parts.push(lh,nb,u8);this.offset+=30+nb.length+sz;this.dataSize+=sz;
+    const cd=new Uint8Array(46);const cv=new DataView(cd.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);
+    cv.setUint16(8,0,true);cv.setUint16(10,0,true);cv.setUint16(12,this._time,true);cv.setUint16(14,this._date,true);
+    cv.setUint32(16,crc,true);cv.setUint32(20,sz,true);cv.setUint32(24,sz,true);
+    cv.setUint16(28,nb.length,true);cv.setUint32(42,lo,true);
+    this.centralDir.push(cd,nb);this.count++;
   }
-
-  addFile(name, data){
-    const nameBytes=new TextEncoder().encode(name);
-    const u8=data instanceof ArrayBuffer?new Uint8Array(data):
-             data instanceof Uint8Array?data:
-             new TextEncoder().encode(data);
-    const crc=this._crc32(u8);
-    const size=u8.length;
-    const localOffset=this.offset;
-
-    // Local file header (30 bytes)
-    const lh=new Uint8Array(30);
-    const lv=new DataView(lh.buffer);
-    lv.setUint32(0,0x04034b50,true);
-    lv.setUint16(4,20,true);
-    lv.setUint16(8,0,true);  // STORE
-    lv.setUint16(10,this._time,true);
-    lv.setUint16(12,this._date,true);
-    lv.setUint32(14,crc,true);
-    lv.setUint32(18,size,true);
-    lv.setUint32(22,size,true);
-    lv.setUint16(26,nameBytes.length,true);
-
-    this.parts.push(lh, nameBytes, u8);
-    this.offset+=30+nameBytes.length+size;
-
-    // Central directory entry (46 bytes)
-    const cd=new Uint8Array(46);
-    const cv=new DataView(cd.buffer);
-    cv.setUint32(0,0x02014b50,true);
-    cv.setUint16(4,20,true);
-    cv.setUint16(6,20,true);
-    cv.setUint16(10,this._time,true);
-    cv.setUint16(12,this._date,true);
-    cv.setUint32(16,crc,true);
-    cv.setUint32(20,size,true);
-    cv.setUint32(24,size,true);
-    cv.setUint16(28,nameBytes.length,true);
-    cv.setUint32(42,localOffset,true);
-
-    this.centralDir.push(cd, nameBytes);
-    this.count++;
-  }
-
-  // Call this periodically to flush accumulated data to a Blob and free memory
-  flush(){
-    if(this.parts.length===0) return;
-    this.blobs.push(new Blob(this.parts));
-    this.parts=[];
-  }
-
+  flush(){if(!this.parts.length)return;this.blobs.push(new Blob(this.parts));this.parts=[]}
   toBlob(){
-    // Flush any remaining parts
-    if(this.parts.length>0) this.flush();
-
-    // Build central directory as one Blob
-    let cdSize=0;
-    for(const p of this.centralDir) cdSize+=p.length;
-    const cdBlob=new Blob(this.centralDir);
-
-    // End of central directory (22 bytes)
-    const eocd=new Uint8Array(22);
-    const ev=new DataView(eocd.buffer);
-    ev.setUint32(0,0x06054b50,true);
-    ev.setUint16(8,this.count,true);
-    ev.setUint16(10,this.count,true);
-    ev.setUint32(12,cdSize,true);
-    ev.setUint32(16,this.offset,true);
-
-    // Final Blob: all flushed blobs + central directory + EOCD
-    return new Blob([...this.blobs, cdBlob, eocd], {type:'application/zip'});
+    if(this.parts.length)this.flush();
+    let cds=0;for(const p of this.centralDir)cds+=p.length;
+    const cdb=new Blob(this.centralDir);
+    const eo=new Uint8Array(22);const ev=new DataView(eo.buffer);
+    ev.setUint32(0,0x06054b50,true);ev.setUint16(8,this.count,true);ev.setUint16(10,this.count,true);
+    ev.setUint32(12,cds,true);ev.setUint32(16,this.offset,true);
+    return new Blob([...this.blobs,cdb,eo],{type:'application/zip'});
   }
 }
 
 async function doExport(mode){
   if(!GEN.length){showSt('expStatus','Generate first.','warn');return}
+  const fmt=$('cFmt').value,ext=fmt==='jpeg'?'jpg':fmt,outSize=parseInt($('cImgSize').value)||1024,qual=95;
+  const colName=$('cName').value||'collection',colSymbol=$('cSymbol').value||'NFT';
+  const colDesc=$('cDesc').value||'',extUrl=$('cExtUrl').value||'';
+  const royalty=parseInt($('cRoyalty').value)||0,creator=$('cCreator').value||'';
+  const creatorShare=parseInt($('cShare').value)||100,startIdx=parseInt($('cStartIdx').value||0);
+  const hasImg=mode==='full'||mode==='img',hasMeta=mode==='full'||mode==='meta';
+  const suffix=mode==='meta'?'_metadata':mode==='img'?'_images':'_collection';
+  const baseName=colName.replace(/\s+/g,'_').toLowerCase();
+  const colMetaJSON=JSON.stringify({name:colName,symbol:colSymbol,description:colDesc,
+    seller_fee_basis_points:royalty,image:'cover.png',external_url:extUrl,
+    properties:{creators:creator?[{address:creator,share:creatorShare}]:[],category:'image'}},null,2);
 
-  const fmt=$('cFmt').value;
-  const ext=fmt==='jpeg'?'jpg':fmt;
-  const outSize=parseInt($('cImgSize').value)||1024;
-  const qual=95;
-  const colName=$('cName').value||'collection';
-  const colSymbol=$('cSymbol').value||'NFT';
-  const colDesc=$('cDesc').value||'';
-  const extUrl=$('cExtUrl').value||'';
-  const royalty=parseInt($('cRoyalty').value)||0;
-  const creator=$('cCreator').value||'';
-  const creatorShare=parseInt($('cShare').value)||100;
-  const startIdx=parseInt($('cStartIdx').value||0);
-  const hasImg=mode==='full'||mode==='img';
-  const hasMeta=mode==='full'||mode==='meta';
-
-  showProg('expProg');
-  setProg('expProgF','expProgP','expProgL',0,'Starting…');
+  showProg('expProg');setProg('expProgF','expProgP','expProgL',0,'Starting…');
   $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=true;
-  hideSt('expStatus');
-  $('expSts').textContent='EXPORTING';
+  hideSt('expStatus');$('expSts').textContent='EXPORTING';
 
-  const zip=new StreamZip();
-  let filesAdded=0;
+  let zip=new StreamZip(),filesInZip=0,partNum=1,totalParts=0;
+  const startTime=Date.now();
+
+  async function shipZip(isFinal){
+    zip.addFile('collection.json',colMetaJSON);
+    const b=zip.toBlob();
+    const ps=(totalParts>0||!isFinal)?`_part${partNum}`:'';
+    dlBlob(b,`${baseName}${suffix}${ps}.zip`);
+    partNum++;
+    await new Promise(r=>setTimeout(r,400));
+    zip=new StreamZip();filesInZip=0;
+  }
 
   if(hasImg){
-    const offCanvas=document.createElement('canvas');
-    offCanvas.width=offCanvas.height=outSize;
-    const offCtx=offCanvas.getContext('2d');
-
+    const offC=document.createElement('canvas');offC.width=offC.height=outSize;
+    const offX=offC.getContext('2d');
     for(let i=0;i<GEN.length;i++){
       const idx=startIdx+i;
-
-      offCtx.clearRect(0,0,outSize,outSize);
-      for(const layer of GEN[i].combo){
-        if(layer&&layer.img) offCtx.drawImage(layer.img,0,0,outSize,outSize);
-      }
-      const blob=await c2b(offCanvas,fmt,qual);
-      const buf=await blob.arrayBuffer();
-      zip.addFile(`images/${idx}.${ext}`,buf);
-      filesAdded++;
-
-      if(hasMeta){
-        zip.addFile(`metadata/${idx}.json`,JSON.stringify(buildMeta(i),null,2));
-        filesAdded++;
-      }
-
-      // Flush to intermediate Blob every FLUSH_EVERY files to free memory
-      if(filesAdded>=FLUSH_EVERY){
-        zip.flush();
-        filesAdded=0;
-        // Give GC a moment
-        await new Promise(r=>setTimeout(r,10));
-      }
-
-      const pct=((i+1)/GEN.length)*100;
-      setProg('expProgF','expProgP','expProgL',pct,`Exporting ${i+1}/${GEN.length}…`);
-      if(i%10===0) await new Promise(r=>setTimeout(r,0));
+      offX.clearRect(0,0,outSize,outSize);
+      for(const layer of GEN[i].combo){if(layer&&layer.img)offX.drawImage(layer.img,0,0,outSize,outSize)}
+      const blob=await c2b(offC,fmt,qual);const buf=await blob.arrayBuffer();
+      zip.addFile(`images/${idx}.${ext}`,buf);filesInZip++;
+      if(hasMeta){zip.addFile(`metadata/${idx}.json`,JSON.stringify(buildMeta(i),null,2));filesInZip++}
+      if(filesInZip%FLUSH_N===0){zip.flush();await new Promise(r=>setTimeout(r,10))}
+      if(zip.dataSize>=MAX_BLOB){totalParts++;setProg('expProgF','expProgP','expProgL',((i+1)/GEN.length)*100,`Saving part ${partNum}…`);await shipZip(false)}
+      // Progress with ETA
+      const done=i+1,pct=(done/GEN.length)*100;
+      const elapsed=(Date.now()-startTime)/1000;
+      const rate=done/elapsed;
+      const remaining=Math.round((GEN.length-done)/rate);
+      const eta=remaining>60?`~${Math.round(remaining/60)}m left`:`~${remaining}s left`;
+      setProg('expProgF','expProgP','expProgL',pct,`Exporting ${done}/${GEN.length} — ${eta}`);
+      if(i%10===0)await new Promise(r=>setTimeout(r,0));
     }
-    offCanvas.width=offCanvas.height=1;
-  } else if(hasMeta){
+    offC.width=offC.height=1;
+  }else if(hasMeta){
     for(let i=0;i<GEN.length;i++){
-      zip.addFile(`metadata/${startIdx+i}.json`,JSON.stringify(buildMeta(i),null,2));
-      filesAdded++;
-      if(filesAdded>=FLUSH_EVERY){ zip.flush(); filesAdded=0; }
+      zip.addFile(`metadata/${startIdx+i}.json`,JSON.stringify(buildMeta(i),null,2));filesInZip++;
+      if(filesInZip%FLUSH_N===0)zip.flush();
     }
   }
 
-  // Collection metadata
-  zip.addFile('collection.json',JSON.stringify({
-    name:colName,symbol:colSymbol,description:colDesc,
-    seller_fee_basis_points:royalty,image:'cover.png',external_url:extUrl,
-    properties:{creators:creator?[{address:creator,share:creatorShare}]:[],category:'image'}
-  },null,2));
-
-  // Finalize — combines flushed Blobs (fast, no re-reading data)
+  // Final ZIP
+  zip.addFile('collection.json',colMetaJSON);
   setProg('expProgF','expProgP','expProgL',100,'Finalizing…');
   await new Promise(r=>setTimeout(r,10));
   const zipBlob=zip.toBlob();
-
-  const suffix=mode==='meta'?'_metadata':mode==='img'?'_images':'_collection';
-  dlBlob(zipBlob,`${colName.replace(/\s+/g,'_').toLowerCase()}${suffix}.zip`);
+  const finalSuffix=totalParts>0?`_part${partNum}`:'';
+  dlBlob(zipBlob,`${baseName}${suffix}${finalSuffix}.zip`);
 
   $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=false;
   $('expSts').textContent='DONE';
-  showSt('expStatus',`✓ ZIP downloaded — ${GEN.length} items, ${(zipBlob.size/(1024*1024)).toFixed(1)} MB`,'ok');
+  const elapsed=((Date.now()-startTime)/1000).toFixed(1);
+  const totalZips=totalParts>0?partNum:1;
+  const sizeMB=(zipBlob.size/(1024*1024)).toFixed(1);
+  if(totalZips===1) showSt('expStatus',`✓ ${GEN.length} items exported — ${sizeMB} MB — ${elapsed}s`,'ok');
+  else showSt('expStatus',`✓ ${GEN.length} items in ${totalZips} parts — ${elapsed}s total`,'ok');
 }
 
 /* ══════════════════════════════════════
