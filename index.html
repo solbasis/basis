@@ -1,1580 +1,1089 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>BASIS://NFT Builder</title>
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-  <meta http-equiv="Content-Security-Policy"
-    content="
-      default-src 'self';
-      script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com;
-      img-src 'self' blob: data:;
-      connect-src 'self';
-      worker-src blob:;
-    ">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <!-- JSZip for collection export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BASIS — NFT Builder Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root {
+  --a:#78b15a;--a90:rgba(120,177,90,.92);--a70:rgba(120,177,90,.70);--a55:rgba(120,177,90,.55);
+  --a40:rgba(120,177,90,.40);--a25:rgba(120,177,90,.25);--a15:rgba(120,177,90,.15);--a10:rgba(120,177,90,.10);
+  --a06:rgba(120,177,90,.06);--a03:rgba(120,177,90,.03);
+  --b:#78b15a;--b70:rgba(120,177,90,.70);--b40:rgba(120,177,90,.40);--b15:rgba(120,177,90,.15);
+  --bg:#000;--bg2:#0a1208;--bg3:#0e1a0c;--surface:rgba(14,26,12,.80);--surface2:rgba(0,0,0,.50);
+  --border:rgba(120,177,90,.12);--border-hi:rgba(120,177,90,.22);--border-act:rgba(120,177,90,.45);
+  --text:rgba(120,177,90,.88);--text-dim:rgba(120,177,90,.50);--text-mute:rgba(120,177,90,.28);
+  --pos:#6dd97d;--neg:#e07070;--warn:#d4a843;
+  --legendary:#ff6b35;--epic:#a855f7;--rare:#3b82f6;--uncommon:#22c55e;--common:#9ca3af;
+  --r:8px;--r-sm:5px;
+  --mono:'JetBrains Mono',monospace;--sans:'Outfit',sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:.8rem;line-height:1.6;letter-spacing:.2px;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 900px 400px at 20% -8%,rgba(120,177,90,.04),transparent 55%),radial-gradient(ellipse 500px 300px at 90% 95%,rgba(120,177,90,.03),transparent 50%)}
+::selection{background:rgba(120,177,90,.2);color:#fff}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--a25);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--a40)}
 
-  <style>
-    /* ═══════════════════════════════════════
-       TOKENS
-    ═══════════════════════════════════════ */
-    :root{
-      --green:#78b15a; --green-dim:rgba(120,177,90,0.55);
-      --text:rgba(120,177,90,0.92); --text-dim:rgba(120,177,90,0.55);
-      --text-soft:rgba(120,177,90,0.80);
-      --panel:rgba(14,26,12,0.70); --panel-2:rgba(0,0,0,0.45);
-      --line:rgba(120,177,90,0.16); --line-hi:rgba(120,177,90,0.35);
-      --glow:0 0 8px rgba(120,177,90,0.18); --glow-lg:0 0 20px rgba(120,177,90,0.55);
-      --pos:#6dd97d; --neg:#e07070; --warn:#d4a843;
-      --r:14px; --r-sm:8px; --r-xs:6px;
-      --pad:20px; --pad-lg:26px;
-      color-scheme:dark;
-    }
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    html{scroll-behavior:smooth;}
-    body{
-      background:#000; color:var(--text);
-      font-family:'IBM Plex Mono',monospace;
-      font-size:0.90rem; line-height:1.7; letter-spacing:0.2px;
-      padding:20px; min-height:100vh; overflow-x:hidden;
-      background-image:repeating-linear-gradient(0deg,rgba(120,177,90,0.02) 0px,transparent 1px,transparent 2px,rgba(120,177,90,0.02) 3px);
-      background-size:3px 3px;
-    }
-    body::before{content:"";position:fixed;inset:0;pointer-events:none;
-      background:radial-gradient(1600px 700px at 50% -5%,rgba(120,177,90,0.055),transparent 55%),
-                 radial-gradient(800px 400px at 80% 80%,rgba(120,177,90,0.03),transparent 60%);
-    }
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:10}
+.main{flex:1;padding:20px 24px;max-width:calc(100vw - 220px);position:relative;z-index:1}
 
-    /* ── LAYOUT ── */
-    .wrap{max-width:1280px;margin:0 auto;position:relative;}
+.logo-area{padding:16px 14px;border-bottom:1px solid var(--border)}
+.logo{font-family:var(--sans);font-size:.95rem;font-weight:800;color:var(--a);letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 20px rgba(120,177,90,.25)}
+.logo-sub{font-size:.58rem;color:var(--text-dim);letter-spacing:1.2px;text-transform:uppercase;margin-top:1px;font-family:var(--mono)}
+.nav{flex:1;padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 14px;font-family:var(--mono);font-size:.68rem;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .12s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--a06)}
+.nav-item.active{color:var(--a);background:var(--a10);border-left-color:var(--a)}
+.nav-item .ni{width:16px;text-align:center;font-size:.75rem;opacity:.6}
+.nav-item.active .ni{opacity:1}
+.nav-sep{height:1px;background:var(--border);margin:6px 14px}
+.sidebar-ft{padding:10px 14px;border-top:1px solid var(--border);font-size:.56rem;color:var(--text-mute);letter-spacing:.8px}
+.sbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border:1px solid var(--border-hi);border-radius:12px;font-size:.54rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--a55);background:var(--a06);margin-right:4px;margin-bottom:4px}
+.dotpulse{width:4px;height:4px;border-radius:50%;background:var(--a);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(120,177,90,.4)}50%{opacity:.4;box-shadow:0 0 0 3px transparent}}
 
-    /* ── HEADER ── */
-    header{
-      display:flex;align-items:center;justify-content:space-between;gap:16px;
-      padding:0 0 18px; border-bottom:1px dashed var(--line-hi);
-      margin-bottom:24px; flex-wrap:wrap;
-    }
-    .hd-left{display:flex;align-items:center;gap:14px;}
-    .hd-badge{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:5px 12px; border:1px solid var(--line-hi);
-      border-radius:20px; font-size:0.70rem; letter-spacing:2px;
-      text-transform:uppercase; color:var(--green);
-      background:rgba(120,177,90,0.07);
-    }
-    .hd-badge .dot-live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-g 2s ease-in-out infinite;}
-    @keyframes pulse-g{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(120,177,90,0.6)}50%{opacity:.6;box-shadow:0 0 0 4px rgba(120,177,90,0)}}
-    h1{font-size:1.05rem;font-weight:600;color:var(--green);letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 12px rgba(120,177,90,0.22);}
-    .hd-sub{font-size:0.72rem;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.page-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.page-title{font-family:var(--sans);font-size:.95rem;font-weight:700;color:var(--a);letter-spacing:1.5px;text-transform:uppercase}
+.page-desc{font-size:.66rem;color:var(--text-dim);letter-spacing:.6px;margin-top:1px}
 
-    /* ── PANEL ── */
-    .panel{
-      position:relative;overflow:hidden;
-      border-radius:var(--r); background:var(--panel);
-      border:1px solid var(--line); box-shadow:var(--glow);
-      padding:var(--pad); margin-bottom:20px;
-    }
-    @media(min-width:768px){.panel{padding:var(--pad-lg);margin-bottom:22px;}}
-    .panel::before{
-      content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-      background:repeating-linear-gradient(to bottom,rgba(120,177,90,0.012) 0px,rgba(120,177,90,0.012) 1px,transparent 1px,transparent 6px);
-    }
-    .panel>*{position:relative;z-index:1;}
+.panel{position:relative;overflow:hidden;border-radius:var(--r);background:var(--surface);border:1px solid var(--border);padding:16px;margin-bottom:14px}
+.panel::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(to bottom,rgba(120,177,90,.005) 0px,rgba(120,177,90,.005) 1px,transparent 1px,transparent 4px)}
+.panel>*{position:relative;z-index:1}
+.pbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 12px;margin:-16px -16px 14px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,var(--a06),transparent 70%)}
+.pbar-l{display:flex;align-items:center;gap:7px}
+.pdots{display:flex;gap:3px}
+.pdot{width:6px;height:6px;border-radius:50%;border:1px solid var(--a25);background:rgba(0,0,0,.3)}
+.plbl{font-size:.62rem;letter-spacing:1.5px;color:var(--a55);text-transform:uppercase;white-space:nowrap}
+.psts{font-size:.58rem;letter-spacing:.8px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
 
-    /* ── MBAR ── */
-    .mbar{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      padding:8px 12px;
-      margin:calc(var(--pad)*-1) calc(var(--pad)*-1) 18px;
-      border-bottom:1px solid rgba(120,177,90,0.10);
-      background:linear-gradient(to right,rgba(120,177,90,0.08),transparent);
-      position:relative;z-index:1;
-    }
-    @media(min-width:768px){.mbar{margin:calc(var(--pad-lg)*-1) calc(var(--pad-lg)*-1) 20px;}}
-    .mbar-l{display:flex;align-items:center;gap:8px;}
-    .dots{display:flex;gap:5px;}
-    .dot{width:8px;height:8px;border-radius:50%;border:1px solid rgba(120,177,90,0.32);background:rgba(0,0,0,0.3);}
-    .mlbl{font-size:0.72rem;letter-spacing:1.6px;color:rgba(120,177,90,0.75);text-transform:uppercase;white-space:nowrap;}
-    .msts{font-size:0.68rem;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap;}
+h2{font-family:var(--sans);font-size:.78rem;font-weight:700;color:var(--a);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+h3{font-family:var(--mono);font-size:.70rem;font-weight:600;color:var(--a70);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px}
+.slbl{font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:3px;display:block}
 
-    /* ── SECTION TITLE ── */
-    h2{font-size:0.88rem;font-weight:600;color:var(--green);letter-spacing:1.8px;text-transform:uppercase;text-shadow:0 0 8px rgba(120,177,90,0.18);margin-bottom:14px;}
-    h3{font-size:0.78rem;font-weight:600;color:var(--green);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:10px;}
-    .section-label{font-size:0.66rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;display:block;}
+.field{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+label,.lbl{font-size:.60rem;letter-spacing:1.3px;text-transform:uppercase;color:var(--text-dim)}
+input[type=text],input[type=number],input[type=url],textarea,select{width:100%;background:rgba(0,0,0,.40);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--mono);font-size:.76rem;padding:7px 9px;outline:none;transition:border-color .12s;min-height:32px;letter-spacing:.2px}
+textarea{min-height:60px;resize:vertical;line-height:1.5}
+input::placeholder,textarea::placeholder{color:var(--text-mute)}
+input:focus,textarea:focus,select:focus{border-color:var(--border-act);box-shadow:0 0 0 2px rgba(120,177,90,.05)}
+select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='rgba(120,177,90,0.4)' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+option{background:#0a180a;color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--a);cursor:pointer;margin:2px 0}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{opacity:.3}
+input[type=checkbox]{width:auto;min-height:auto;accent-color:var(--a)}
 
-    /* ── TABS ── */
-    .tabs{
-      display:flex;gap:0;margin-bottom:24px;
-      border:1px solid var(--line-hi);border-radius:var(--r-sm);overflow:hidden;
-      background:rgba(0,0,0,0.30);
-    }
-    .tab{
-      flex:1;padding:12px 10px;
-      border:none;border-right:1px solid var(--line);
-      background:transparent;color:var(--text-dim);
-      font-family:inherit;font-size:0.74rem;font-weight:500;
-      letter-spacing:1.2px;text-transform:uppercase;cursor:pointer;
-      transition:background .16s,color .16s;min-height:44px;
-    }
-    .tab:last-child{border-right:0;}
-    .tab:hover{background:rgba(120,177,90,0.07);color:var(--text);}
-    .tab.active{background:rgba(120,177,90,0.12);color:var(--green);box-shadow:inset 0 -2px 0 var(--green);}
-    .tab-panel{display:none;}
-    .tab-panel.active{display:block;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 
-    /* ── INPUTS ── */
-    .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
-    label{font-size:0.68rem;letter-spacing:1.8px;text-transform:uppercase;color:var(--text-dim);}
-    input[type=text],input[type=number],input[type=url],textarea,select{
-      width:100%;background:rgba(0,0,0,0.40);
-      border:1px dashed rgba(120,177,90,0.22);border-radius:var(--r-sm);
-      color:var(--text);font-family:inherit;font-size:0.84rem;
-      padding:10px 12px;outline:none;
-      transition:border-color .18s,background .18s;
-      min-height:40px;letter-spacing:0.3px;
-    }
-    textarea{min-height:80px;resize:vertical;line-height:1.6;}
-    input[type=text]::placeholder,textarea::placeholder{color:rgba(120,177,90,0.25);}
-    input[type=text]:focus,input[type=number]:focus,input[type=url]:focus,textarea:focus,select:focus{
-      border-color:rgba(120,177,90,0.50);background:rgba(0,0,0,0.50);
-      box-shadow:0 0 0 2px rgba(120,177,90,0.07);
-    }
-    select{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(120,177,90,0.6)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
-    option{background:#0a180a;color:var(--text);}
-    input[type=range]{width:100%;accent-color:var(--green);cursor:pointer;margin:4px 0;}
-    input[type=number]{-moz-appearance:textfield;}
-    input[type=number]::-webkit-inner-spin-button{opacity:.5;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 12px;border:1px solid var(--border-hi);border-radius:var(--r-sm);background:transparent;color:var(--text);font-family:var(--mono);font-size:.66rem;font-weight:500;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;transition:all .1s;user-select:none;min-height:32px;white-space:nowrap}
+.btn:hover{background:var(--a10);border-color:var(--a);color:var(--a);box-shadow:0 0 12px rgba(120,177,90,.12);transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn:disabled{opacity:.25;cursor:not-allowed;transform:none!important}
+.btn-p{border-color:var(--a40);background:var(--a10);color:var(--a);font-weight:600}
+.btn-p:hover{background:rgba(120,177,90,.16);box-shadow:0 0 20px rgba(120,177,90,.2)}
+.btn-d{border-color:rgba(255,68,102,.25);color:rgba(255,68,102,.7)}
+.btn-d:hover{background:rgba(255,68,102,.07);border-color:var(--neg);color:var(--neg)}
+.btn-sm{padding:4px 8px;font-size:.60rem;min-height:24px}
+.btn-xs{padding:2px 6px;font-size:.56rem;min-height:20px}
+.btn-full{width:100%}
+.btn-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.btn-icon{width:24px;height:24px;padding:0;min-height:24px;display:inline-flex;align-items:center;justify-content:center}
 
-    /* ── GRID LAYOUTS ── */
-    .g2{display:grid;grid-template-columns:1fr;gap:14px;}
-    @media(min-width:640px){.g2{grid-template-columns:1fr 1fr;}}
-    .g3{display:grid;grid-template-columns:1fr;gap:14px;}
-    @media(min-width:640px){.g3{grid-template-columns:1fr 1fr;}}
-    @media(min-width:900px){.g3{grid-template-columns:1fr 1fr 1fr;}}
-    .g4{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-    @media(min-width:768px){.g4{grid-template-columns:repeat(4,1fr);}}
+/* ─── RARITY TIER COLORS ─── */
+.tier-legendary{color:var(--legendary);border-color:rgba(255,107,53,.4)}
+.tier-epic{color:var(--epic);border-color:rgba(168,85,247,.4)}
+.tier-rare{color:var(--rare);border-color:rgba(59,130,246,.4)}
+.tier-uncommon{color:var(--uncommon);border-color:rgba(34,197,94,.4)}
+.tier-common{color:var(--common);border-color:rgba(156,163,175,.4)}
+.tier-badge{font-size:.52rem;padding:1px 6px;border-radius:8px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;display:inline-flex;align-items:center;gap:3px}
+.tier-badge.legendary{background:rgba(255,107,53,.12);color:var(--legendary);border:1px solid rgba(255,107,53,.3)}
+.tier-badge.epic{background:rgba(168,85,247,.12);color:var(--epic);border:1px solid rgba(168,85,247,.3)}
+.tier-badge.rare{background:rgba(59,130,246,.12);color:var(--rare);border:1px solid rgba(59,130,246,.3)}
+.tier-badge.uncommon{background:rgba(34,197,94,.12);color:var(--uncommon);border:1px solid rgba(34,197,94,.3)}
+.tier-badge.common{background:rgba(156,163,175,.12);color:var(--common);border:1px solid rgba(156,163,175,.3)}
+.tier-dot{width:5px;height:5px;border-radius:50%}
+.tier-dot.legendary{background:var(--legendary)}
+.tier-dot.epic{background:var(--epic)}
+.tier-dot.rare{background:var(--rare)}
+.tier-dot.uncommon{background:var(--uncommon)}
+.tier-dot.common{background:var(--common)}
 
-    /* ── BUTTONS ── */
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;gap:7px;
-      padding:10px 16px;
-      border:1px solid rgba(120,177,90,0.36);border-radius:var(--r-sm);
-      background:transparent;color:var(--text);
-      font-family:inherit;font-size:0.78rem;font-weight:500;
-      letter-spacing:1.1px;text-transform:uppercase;
-      cursor:pointer;box-shadow:var(--glow);
-      transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .10s;
-      user-select:none;-webkit-tap-highlight-color:transparent;
-      min-height:40px;appearance:none;white-space:nowrap;
-    }
-    .btn:hover{background:rgba(120,177,90,0.10);border-color:var(--green);color:var(--green);box-shadow:var(--glow-lg);transform:translateY(-1px);}
-    .btn:active{transform:translateY(0) scale(0.985);}
-    .btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
-    .btn:focus-visible{outline:2px solid var(--green);outline-offset:3px;}
-    .btn-primary{border-color:rgba(120,177,90,0.55);background:rgba(120,177,90,0.09);font-weight:600;}
-    .btn-primary:hover{background:rgba(120,177,90,0.18);box-shadow:0 0 24px rgba(120,177,90,0.35);}
-    .btn-danger{border-color:rgba(220,80,60,0.40);color:rgba(220,100,80,0.85);}
-    .btn-danger:hover{background:rgba(220,80,60,0.10);border-color:var(--neg);color:var(--neg);}
-    .btn-sm{padding:6px 12px;font-size:0.72rem;min-height:32px;}
-    .btn-full{width:100%;}
-    .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+/* ─── LAYER & TRAIT ─── */
+.layer-list{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.layer-item{background:rgba(0,0,0,.28);border:1px solid var(--border);border-radius:var(--r);padding:12px;transition:border-color .12s}
+.layer-item:hover{border-color:var(--border-hi)}
+.layer-item.drag-over{border-color:var(--a);background:var(--a06)}
+.layer-hdr{display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap}
+.layer-drag{cursor:grab;font-size:.8rem;opacity:.35;user-select:none;padding:2px;transition:opacity .12s}
+.layer-drag:hover{opacity:.8}
+.layer-drag:active{cursor:grabbing}
+.layer-name-inp{flex:1;min-height:26px!important;padding:3px 7px!important;font-size:.72rem!important;font-weight:600!important;color:var(--a)!important;background:transparent!important;border-color:transparent!important}
+.layer-name-inp:focus{border-color:var(--border-act)!important;background:rgba(0,0,0,.3)!important}
+.layer-badge{font-size:.54rem;padding:1px 6px;border-radius:8px;background:var(--a06);border:1px solid var(--border);color:var(--text-dim);letter-spacing:.8px}
+.layer-opt-lbl{font-size:.56rem;color:var(--text-dim);display:flex;align-items:center;gap:3px}
 
-    /* ── UPLOAD ZONE ── */
-    .upload-zone{
-      border:2px dashed rgba(120,177,90,0.28);border-radius:var(--r);
-      background:rgba(0,0,0,0.25);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:8px;padding:32px 20px;cursor:pointer;
-      transition:border-color .18s,background .18s;
-      text-align:center;position:relative;
-    }
-    .upload-zone:hover,.upload-zone.drag{border-color:var(--green);background:rgba(120,177,90,0.06);}
-    .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-    .uz-icon{font-size:2rem;opacity:.5;}
-    .uz-label{font-size:0.78rem;color:var(--text-dim);letter-spacing:1px;}
-    .uz-sub{font-size:0.68rem;color:rgba(120,177,90,0.35);}
+/* Trait thumbnails with drag-swap */
+.trait-grid{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;min-height:30px}
+.trait-thumb{width:52px;height:52px;border-radius:var(--r-sm);border:1px solid var(--border);background:rgba(0,0,0,.4);overflow:hidden;position:relative;cursor:grab;transition:all .12s;flex-shrink:0}
+.trait-thumb:hover{border-color:var(--a40);transform:scale(1.05);z-index:2}
+.trait-thumb.dragging{opacity:.3;transform:scale(.9)}
+.trait-thumb.drag-over{border-color:var(--a);box-shadow:0 0 10px rgba(120,177,90,.3);transform:scale(1.1)}
+.trait-thumb canvas{width:100%;height:100%;display:block}
+.trait-thumb .t-name{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.8);font-size:.46rem;padding:1px 2px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-dim)}
+.trait-thumb .t-tier{position:absolute;top:1px;left:1px;width:6px;height:6px;border-radius:50%}
+.trait-thumb .t-pct{position:absolute;top:1px;right:1px;background:rgba(0,0,0,.85);font-size:.44rem;padding:0 2px;border-radius:2px;color:var(--a55)}
+.trait-thumb .t-del{position:absolute;top:-2px;right:-2px;width:14px;height:14px;background:rgba(255,68,102,.85);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:.48rem;cursor:pointer;color:#fff;border:none;z-index:3}
+.trait-thumb:hover .t-del{display:flex}
 
-    /* ── PREVIEW CANVAS AREA ── */
-    .canvas-wrap{
-      position:relative;background:rgba(0,0,0,0.50);
-      border:1px solid var(--line);border-radius:var(--r);
-      overflow:hidden;display:flex;align-items:center;justify-content:center;
-      min-height:200px;
-    }
-    .canvas-wrap canvas{display:block;max-width:100%;max-height:420px;border-radius:calc(var(--r) - 2px);}
-    .canvas-placeholder{
-      display:flex;flex-direction:column;align-items:center;gap:10px;
-      padding:40px 20px;color:rgba(120,177,90,0.25);
-      font-size:0.78rem;letter-spacing:1px;text-align:center;
-    }
-    .canvas-placeholder .icon{font-size:2.5rem;opacity:.3;}
+/* ─── RARITY SLIDERS ─── */
+.rarity-layer{margin-bottom:14px;padding:10px;background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:var(--r)}
+.rarity-layer-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.rarity-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:4px 6px;border-radius:var(--r-sm);transition:background .1s}
+.rarity-row:hover{background:rgba(120,177,90,.03)}
+.r-thumb{width:24px;height:24px;border-radius:3px;overflow:hidden;flex-shrink:0;border:1px solid var(--border)}
+.r-thumb canvas{width:100%;height:100%;display:block}
+.r-name{font-size:.62rem;color:var(--text-dim);min-width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-slider{flex:1;min-width:60px}
+.r-slider input[type=range]{min-height:auto;margin:0}
+.r-weight{font-size:.60rem;color:var(--text-dim);width:28px;text-align:right}
+.r-pct{font-size:.62rem;font-weight:600;min-width:34px;text-align:right}
+.r-tier{min-width:70px}
 
-    /* ── ATTRIBUTE ROW ── */
-    .attr-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
-    .attr-row{
-      display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:center;
-    }
-    .attr-row input{margin-bottom:0;min-height:36px;}
-    .attr-rarity{display:flex;align-items:center;gap:6px;font-size:0.70rem;color:var(--text-dim);white-space:nowrap;}
+/* ─── DISTRIBUTION BARS ─── */
+.dist-row{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+.d-name{font-size:.58rem;color:var(--text-dim);min-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-bar{flex:1;height:5px;background:rgba(120,177,90,.06);border-radius:3px;overflow:hidden}
+.d-fill{height:100%;border-radius:3px;transition:width .25s}
+.d-pct{font-size:.56rem;min-width:50px;text-align:right}
 
-    /* ── COLLECTION LAYER ── */
-    .layer-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
-    .layer-item{
-      background:rgba(0,0,0,0.30);border:1px solid var(--line);
-      border-radius:var(--r-sm);padding:12px 14px;
-    }
-    .layer-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
-    .layer-name{flex:1;font-size:0.80rem;font-weight:600;color:var(--green);letter-spacing:1px;}
-    .layer-count{font-size:0.68rem;color:var(--text-dim);}
-    .layer-order{display:flex;align-items:center;gap:4px;font-size:0.68rem;color:var(--text-dim);}
-    .layer-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-    .layer-thumb{
-      width:52px;height:52px;border-radius:var(--r-xs);
-      border:1px solid var(--line);background:rgba(0,0,0,0.4);
-      overflow:hidden;position:relative;cursor:pointer;
-    }
-    .layer-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
-    .layer-thumb .th-name{
-      position:absolute;bottom:0;left:0;right:0;
-      background:rgba(0,0,0,0.7);font-size:0.55rem;
-      padding:2px 3px;text-align:center;overflow:hidden;
-      text-overflow:ellipsis;white-space:nowrap;
-    }
-    .layer-thumb .th-del{
-      position:absolute;top:1px;right:1px;width:14px;height:14px;
-      background:rgba(180,40,40,0.85);border-radius:50%;
-      display:none;align-items:center;justify-content:center;
-      font-size:0.55rem;cursor:pointer;color:#fff;
-    }
-    .layer-thumb:hover .th-del{display:flex;}
-    .rarity-row{display:flex;align-items:center;gap:8px;margin-top:4px;}
-    .rarity-bar{flex:1;height:4px;background:rgba(120,177,90,0.12);border-radius:2px;overflow:hidden;}
-    .rarity-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s;}
+/* Presets */
+.presets{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.preset-btn{font-size:.54rem;padding:2px 6px;border-radius:8px;background:var(--a06);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;transition:all .1s;font-family:var(--mono)}
+.preset-btn:hover{border-color:var(--a40);color:var(--a)}
 
-    /* ── COLLECTION PREVIEW GRID ── */
-    .preview-grid{
-      display:grid;gap:8px;
-      grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
-      margin-top:14px;
-    }
-    .preview-cell{
-      background:rgba(0,0,0,0.40);border:1px solid var(--line);
-      border-radius:var(--r-xs);overflow:hidden;text-align:center;
-      transition:border-color .15s,transform .15s;cursor:pointer;
-    }
-    .preview-cell:hover{border-color:rgba(120,177,90,0.45);transform:scale(1.04);}
-    .preview-cell canvas{width:100%;display:block;}
-    .preview-cell .pc-num{font-size:0.60rem;padding:3px 6px;color:var(--text-dim);}
+/* ─── RULES ─── */
+.rule-item{display:flex;align-items:center;gap:6px;padding:7px 8px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:5px;flex-wrap:wrap}
+.rule-item select{min-height:24px;padding:2px 6px;font-size:.64rem;max-width:120px}
+.rule-type{font-size:.52rem;font-weight:700;padding:2px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.8px}
+.rule-type.never{background:rgba(255,68,102,.12);color:var(--neg)}
+.rule-type.requires{background:rgba(255,170,34,.12);color:var(--warn)}
 
-    /* ── METADATA EDITOR ── */
-    .meta-editor{
-      width:100%;min-height:260px;background:rgba(0,0,0,0.50);
-      border:1px solid var(--line);border-radius:var(--r-sm);
-      color:#a8d890;font-family:inherit;font-size:0.80rem;
-      padding:14px;outline:none;resize:vertical;
-      line-height:1.7;letter-spacing:0.3px;
-      transition:border-color .18s;
-    }
-    .meta-editor:focus{border-color:rgba(120,177,90,0.45);}
-    .meta-valid{border-color:rgba(80,200,80,0.45)!important;}
-    .meta-invalid{border-color:rgba(220,80,60,0.45)!important;}
+/* ─── KV ─── */
+.kv{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:rgba(0,0,0,.18)}
+.kv-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border-top:1px solid var(--border);font-size:.68rem}
+.kv-row:first-child{border-top:0}
+.kv-k{text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);white-space:nowrap;font-size:.60rem}
+.kv-v{color:var(--a);font-weight:600;text-align:right}
 
-    /* ── STATUS / TOAST ── */
-    .status-bar{
-      padding:10px 14px;border-radius:var(--r-sm);font-size:0.78rem;
-      display:none;align-items:center;gap:8px;margin-top:12px;
-    }
-    .status-bar.show{display:flex;}
-    .status-bar.ok{background:rgba(80,180,80,0.10);border:1px solid rgba(80,180,80,0.30);color:var(--pos);}
-    .status-bar.err{background:rgba(220,80,60,0.10);border:1px solid rgba(220,80,60,0.30);color:var(--neg);}
-    .status-bar.warn{background:rgba(212,168,67,0.10);border:1px solid rgba(212,168,67,0.30);color:var(--warn);}
-    .status-bar.info{background:rgba(120,177,90,0.08);border:1px solid rgba(120,177,90,0.25);color:var(--text);}
+/* ─── PREVIEW GRID ─── */
+.preview-grid{display:grid;gap:5px;grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
+.preview-cell{background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;text-align:center;cursor:pointer;transition:all .1s}
+.preview-cell:hover{border-color:var(--a40);transform:scale(1.04);z-index:2}
+.preview-cell canvas{width:100%;display:block}
+.preview-cell .pc-num{font-size:.50rem;padding:2px 4px;color:var(--text-dim);letter-spacing:.3px}
 
-    /* ── PROGRESS ── */
-    .progress-wrap{margin-top:12px;display:none;}
-    .progress-wrap.show{display:block;}
-    .progress-label{font-size:0.70rem;color:var(--text-dim);margin-bottom:6px;display:flex;justify-content:space-between;}
-    .progress-track{height:6px;background:rgba(120,177,90,0.10);border-radius:3px;overflow:hidden;border:1px solid var(--line);}
-    .progress-fill{height:100%;background:linear-gradient(to right,rgba(60,160,60,0.7),var(--pos));border-radius:3px;transition:width .3s ease;width:0%;}
+/* ─── STATUS & PROGRESS ─── */
+.status-bar{padding:7px 10px;border-radius:var(--r-sm);font-size:.68rem;display:none;align-items:center;gap:5px;margin-top:8px}
+.status-bar.show{display:flex}
+.status-bar.ok{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);color:var(--pos)}
+.status-bar.err{background:rgba(255,68,102,.06);border:1px solid rgba(255,68,102,.2);color:var(--neg)}
+.status-bar.warn{background:rgba(255,170,34,.06);border:1px solid rgba(255,170,34,.2);color:var(--warn)}
+.status-bar.info{background:var(--a06);border:1px solid var(--border);color:var(--text)}
+.prog-wrap{margin-top:8px;display:none}
+.prog-wrap.show{display:block}
+.prog-lbl{font-size:.60rem;color:var(--text-dim);margin-bottom:3px;display:flex;justify-content:space-between}
+.prog-track{height:4px;background:var(--a06);border-radius:2px;overflow:hidden;border:1px solid var(--border)}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--a40),var(--a));border-radius:2px;transition:width .15s;width:0%}
 
-    /* ── DIVIDER ── */
-    hr{border:none;border-top:1px dashed rgba(120,177,90,0.12);margin:18px 0;}
+/* ─── MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--r);max-width:640px;width:100%;max-height:88vh;overflow-y:auto;padding:20px;box-shadow:0 0 50px rgba(120,177,90,.08)}
+.modal-close{float:right;background:none;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .1s}
+.modal-close:hover{border-color:var(--neg);color:var(--neg)}
+.modal-img{width:100%;max-width:360px;border-radius:var(--r-sm);border:1px solid var(--border);margin:12px auto;display:block}
+.modal-traits{display:flex;flex-direction:column;gap:3px;margin-top:10px}
+.mt-row{display:flex;justify-content:space-between;align-items:center;padding:4px 7px;background:rgba(0,0,0,.25);border-radius:var(--r-sm);font-size:.68rem}
+.mt-k{color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;font-size:.60rem}
+.mt-v{color:var(--a);font-weight:600}
 
-    /* ── CHIP / TAG ── */
-    .chip{
-      display:inline-flex;align-items:center;gap:5px;
-      padding:3px 9px;border-radius:20px;
-      background:rgba(120,177,90,0.09);border:1px solid rgba(120,177,90,0.22);
-      font-size:0.66rem;letter-spacing:1px;color:var(--text-soft);
-    }
+/* ─── META EDITOR ─── */
+.meta-editor{width:100%;min-height:200px;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:var(--r-sm);color:rgba(160,210,130,.85);font-family:var(--mono);font-size:.72rem;padding:10px;outline:none;resize:vertical;line-height:1.55;transition:border-color .12s}
+.meta-editor:focus{border-color:var(--border-act)}
+.meta-valid{border-color:rgba(0,255,136,.3)!important}
+.meta-invalid{border-color:rgba(255,68,102,.3)!important}
 
-    /* ── KV ── */
-    .kv{border:1px solid rgba(120,177,90,0.14);border-radius:var(--r-sm);overflow:hidden;background:rgba(0,0,0,0.20);}
-    .kv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-top:1px dashed rgba(120,177,90,0.10);font-size:0.78rem;}
-    .kv-row:first-child{border-top:0;}
-    .kv-k{text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);white-space:nowrap;}
-    .kv-v{color:#fff;font-weight:600;text-align:right;word-break:break-all;}
+/* ─── CANVAS WRAP ─── */
+.canvas-wrap{position:relative;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:160px}
+.canvas-wrap canvas{display:block;max-width:100%;max-height:340px;border-radius:calc(var(--r) - 2px)}
+.canvas-ph{display:flex;flex-direction:column;align-items:center;gap:6px;padding:24px 14px;color:var(--text-mute);font-size:.68rem;letter-spacing:.8px;text-align:center}
+.canvas-ph .icon{font-size:1.8rem;opacity:.2}
 
-    /* ── TOOLTIP ── */
-    [data-tip]{position:relative;cursor:help;}
-    [data-tip]::after{
-      content:attr(data-tip);
-      position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
-      background:rgba(10,20,8,0.96);color:var(--text);
-      font-size:0.66rem;padding:5px 9px;border-radius:var(--r-xs);
-      white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;
-      border:1px solid var(--line);z-index:100;letter-spacing:0.5px;
-    }
-    [data-tip]:hover::after{opacity:1;}
+/* ─── ATTR ROWS ─── */
+.attr-list{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.attr-row{display:grid;grid-template-columns:1fr 1fr auto;gap:5px;align-items:center}
+.attr-row input{min-height:26px}
 
-    /* ── SPIN ── */
-    .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(120,177,90,0.20);border-top-color:var(--green);border-radius:50%;animation:rotate .6s linear infinite;flex-shrink:0;}
-    @keyframes rotate{to{transform:rotate(360deg);}}
+hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
+.page{display:none}.page.active{display:block}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--a15);border-top-color:var(--a);border-radius:50%;animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ── SEP ── */
-    .sep{display:flex;align-items:center;gap:14px;margin:24px 0 16px;color:var(--text-dim);font-size:0.68rem;letter-spacing:4px;text-transform:uppercase;user-select:none;}
-    .sep::before,.sep::after{content:"";flex:1;border-top:1px dashed rgba(120,177,90,0.14);}
+/* Filter bar */
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+.filter-bar select,.filter-bar input[type=text]{min-height:26px;padding:3px 7px;font-size:.64rem}
 
-    @media(max-width:767px){
-      body{padding:12px;}
-      .panel{padding:16px;}
-      .mbar{margin:-16px -16px 16px;}
-      .tabs{flex-direction:column;}
-      .tab{border-right:0;border-bottom:1px solid var(--line);}
-      .tab:last-child{border-bottom:0;}
-    }
-    @media(prefers-reduced-motion:reduce){
-      .spin,.dot-live{animation:none!important;}
-      .btn,.upload-zone,.preview-cell{transition:none!important;}
-      .panel::before{display:none;}
-    }
-  </style>
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border-hi);border-radius:var(--r);background:rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:20px 14px;cursor:pointer;transition:all .12s;text-align:center;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--a);background:var(--a06)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+/* Tier legend */
+.tier-legend{display:flex;gap:8px;flex-wrap:wrap;padding:6px 0}
+.tier-legend-item{display:flex;align-items:center;gap:4px;font-size:.58rem;color:var(--text-dim)}
+
+/* Project bar */
+.project-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:var(--a03);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:14px}
+.project-bar span{font-size:.62rem;color:var(--text-dim)}
+
+@media(max-width:900px){
+  .sidebar{display:none}
+  .main{max-width:100%;padding:14px}
+  .g2,.g3{grid-template-columns:1fr}
+  .mobile-nav{display:flex!important}
+}
+.mobile-nav{display:none;gap:0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:12px;background:var(--surface)}
+.mobile-nav .m-tab{flex:1;padding:7px 4px;border:none;border-right:1px solid var(--border);background:transparent;color:var(--text-dim);font-family:var(--mono);font-size:.52rem;font-weight:500;letter-spacing:.6px;text-transform:uppercase;cursor:pointer;transition:all .1s}
+.mobile-nav .m-tab:last-child{border-right:0}
+.mobile-nav .m-tab.active{background:var(--a10);color:var(--a)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
 </head>
 <body>
-<div class="wrap">
-
-  <!-- HEADER -->
-  <header>
-    <div class="hd-left">
-      <div>
-        <h1>BASIS://NFT BUILDER</h1>
-        <div class="hd-sub">Solana · Metaplex Compatible · Production Ready</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <div class="hd-badge"><span class="dot-live"></span>SOLANA MAINNET</div>
-      <div class="hd-badge">METAPLEX</div>
-    </div>
-  </header>
-
-  <!-- MAIN TABS -->
-  <div class="tabs" role="tablist" id="mainTabs">
-    <button class="tab active" data-tab="single" role="tab">[ SINGLE NFT ]</button>
-    <button class="tab" data-tab="collection" role="tab">[ COLLECTION BUILDER ]</button>
-    <button class="tab" data-tab="metadata" role="tab">[ METADATA EDITOR ]</button>
+<div class="app">
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo">BASIS://NFT</div>
+    <div class="logo-sub">Professional Builder v2</div>
   </div>
+  <nav class="nav">
+    <button class="nav-item active" data-page="single"><span class="ni">◈</span>Single NFT</button>
+    <button class="nav-item" data-page="layers"><span class="ni">◫</span>Layers & Traits</button>
+    <button class="nav-item" data-page="rarity"><span class="ni">◆</span>Rarity System</button>
+    <button class="nav-item" data-page="rules"><span class="ni">⚡</span>Trait Rules</button>
+    <div class="nav-sep"></div>
+    <button class="nav-item" data-page="generate"><span class="ni">▶</span>Generate</button>
+    <button class="nav-item" data-page="preview"><span class="ni">◳</span>Preview & Filter</button>
+    <button class="nav-item" data-page="export"><span class="ni">⬇</span>Export</button>
+    <div class="nav-sep"></div>
+    <button class="nav-item" data-page="metadata"><span class="ni">{}</span>Metadata Editor</button>
+    <button class="nav-item" data-page="project"><span class="ni">💾</span>Project</button>
+  </nav>
+  <div class="sidebar-ft">
+    <div><span class="sbadge"><span class="dotpulse"></span>METAPLEX</span><span class="sbadge">SOLANA</span></div>
+    <div style="margin-top:4px;">v2.0 Pro</div>
+  </div>
+</aside>
+<main class="main">
+<div class="mobile-nav">
+  <button class="m-tab active" data-page="single">Single</button>
+  <button class="m-tab" data-page="layers">Layers</button>
+  <button class="m-tab" data-page="rarity">Rarity</button>
+  <button class="m-tab" data-page="rules">Rules</button>
+  <button class="m-tab" data-page="generate">Gen</button>
+  <button class="m-tab" data-page="preview">Preview</button>
+  <button class="m-tab" data-page="export">Export</button>
+  <button class="m-tab" data-page="metadata">Meta</button>
+  <button class="m-tab" data-page="project">Save</button>
+</div>
 
-  <!-- ════════════════════════════════════
-       TAB 1 · SINGLE NFT STUDIO
-  ════════════════════════════════════ -->
-  <div class="tab-panel active" id="tab-single">
-
-    <div class="g2" style="align-items:start;gap:20px;">
-
-      <!-- LEFT: Upload + Canvas -->
-      <div>
-        <div class="panel">
-          <div class="mbar">
-            <div class="mbar-l"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="mlbl">BASIS://CANVAS</div></div>
-            <div class="msts" id="singleCanvasStatus">EMPTY</div>
-          </div>
-
-          <div class="canvas-wrap" id="singleCanvasWrap">
-            <div class="canvas-placeholder" id="singlePlaceholder">
-              <div class="icon">🖼</div>
-              <div>UPLOAD AN IMAGE TO BEGIN</div>
-              <div style="font-size:0.65rem;color:rgba(120,177,90,0.25);">PNG · JPG · WEBP · GIF · SVG</div>
-            </div>
-            <canvas id="singleCanvas" style="display:none;"></canvas>
-          </div>
-
-          <div class="btn-row">
-            <label class="btn btn-primary" style="cursor:pointer;position:relative;">
-              [ UPLOAD IMAGE ]
-              <input type="file" accept="image/*" id="singleUpload" style="position:absolute;inset:0;opacity:0;cursor:pointer;">
-            </label>
-            <button class="btn" id="singleClearBtn" disabled>[ CLEAR ]</button>
-          </div>
-        </div>
-
-        <!-- Export Settings -->
-        <div class="panel">
-          <div class="mbar">
-            <div class="mbar-l"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="mlbl">BASIS://EXPORT</div></div>
-            <div class="msts">SETTINGS</div>
-          </div>
-
-          <div class="g2">
-            <div class="field">
-              <label>Output Size</label>
-              <select id="singleSize">
-                <option value="256">256 × 256</option>
-                <option value="512">512 × 512</option>
-                <option value="1024" selected>1024 × 1024</option>
-                <option value="2048">2048 × 2048</option>
-                <option value="custom">Custom…</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>File Format</label>
-              <select id="singleFormat">
-                <option value="png" selected>PNG (lossless)</option>
-                <option value="jpeg">JPEG (compressed)</option>
-                <option value="webp">WebP (optimised)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="g2" id="customSizeRow" style="display:none;">
-            <div class="field">
-              <label>Width (px)</label>
-              <input type="number" id="customW" value="1024" min="64" max="4096">
-            </div>
-            <div class="field">
-              <label>Height (px)</label>
-              <input type="number" id="customH" value="1024" min="64" max="4096">
-            </div>
-          </div>
-
-          <div class="g2">
-            <div class="field">
-              <label>Quality <span data-tip="JPEG/WebP only">ℹ</span></label>
-              <div style="display:flex;align-items:center;gap:10px;">
-                <input type="range" id="singleQuality" min="60" max="100" value="95" style="flex:1;">
-                <span id="singleQualityVal" style="font-size:0.74rem;width:34px;text-align:right;color:var(--text-dim);">95%</span>
-              </div>
-            </div>
-            <div class="field">
-              <label>Background</label>
-              <select id="singleBg">
-                <option value="transparent">Transparent</option>
-                <option value="black">Black</option>
-                <option value="white">White</option>
-                <option value="custom">Custom colour</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field" id="customBgField" style="display:none;">
-            <label>Custom Background Colour</label>
-            <input type="text" id="customBgColor" placeholder="#1a1a2e" value="#1a1a2e">
-          </div>
-
-          <div class="btn-row">
-            <button class="btn btn-primary" id="singleDownloadBtn" disabled>[ DOWNLOAD IMAGE ]</button>
-            <button class="btn" id="singleMetaDownloadBtn" disabled>[ DOWNLOAD METADATA ]</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: Metadata -->
-      <div>
-        <div class="panel">
-          <div class="mbar">
-            <div class="mbar-l"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="mlbl">BASIS://METADATA</div></div>
-            <div class="msts">METAPLEX</div>
-          </div>
-
-          <div class="field">
-            <label>NFT Name <span style="color:var(--neg)">*</span></label>
-            <input type="text" id="singleName" placeholder="My NFT #1">
-          </div>
-          <div class="field">
-            <label>Symbol</label>
-            <input type="text" id="singleSymbol" placeholder="NFT" maxlength="10">
-          </div>
-          <div class="field">
-            <label>Description</label>
-            <textarea id="singleDesc" placeholder="Describe your NFT…" rows="3"></textarea>
-          </div>
-
-          <hr>
-          <div class="g2">
-            <div class="field">
-              <label>External URL</label>
-              <input type="url" id="singleExtUrl" placeholder="https://yourproject.io">
-            </div>
-            <div class="field">
-              <label>Royalty (basis pts) <span data-tip="500 = 5%">ℹ</span></label>
-              <input type="number" id="singleRoyalty" value="500" min="0" max="10000">
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Creator Wallet Address</label>
-            <input type="text" id="singleCreator" placeholder="Solana wallet address">
-          </div>
-
-          <hr>
-          <h3>&gt; ATTRIBUTES</h3>
-          <div class="attr-list" id="singleAttrList"></div>
-          <button class="btn btn-sm" id="addAttrBtn">[ + ADD ATTRIBUTE ]</button>
-
-          <hr>
-          <h3>&gt; METADATA PREVIEW</h3>
-          <div class="meta-editor" id="singleMetaPreview" style="min-height:160px;font-size:0.74rem;cursor:default;" readonly></div>
-        </div>
-      </div>
-
-    </div><!-- /g2 -->
-  </div><!-- /tab-single -->
-
-  <!-- ════════════════════════════════════
-       TAB 2 · COLLECTION BUILDER
-  ════════════════════════════════════ -->
-  <div class="tab-panel" id="tab-collection">
-
-    <!-- Collection Settings -->
-    <div class="panel">
-      <div class="mbar">
-        <div class="mbar-l"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="mlbl">BASIS://COLLECTION-SETTINGS</div></div>
-        <div class="msts">CONFIG</div>
-      </div>
-
-      <div class="g3">
-        <div class="field">
-          <label>Collection Name <span style="color:var(--neg)">*</span></label>
-          <input type="text" id="colName" placeholder="My NFT Collection">
-        </div>
-        <div class="field">
-          <label>Symbol</label>
-          <input type="text" id="colSymbol" placeholder="MYNFT" maxlength="10">
-        </div>
-        <div class="field">
-          <label>Collection Size</label>
-          <input type="number" id="colSize" value="100" min="1" max="10000">
-        </div>
-      </div>
-
-      <div class="g3">
-        <div class="field">
-          <label>Description</label>
-          <input type="text" id="colDesc" placeholder="Collection description…">
-        </div>
-        <div class="field">
-          <label>External URL</label>
-          <input type="url" id="colExtUrl" placeholder="https://yourproject.io">
-        </div>
-        <div class="field">
-          <label>Royalty (basis pts) <span data-tip="500 = 5%">ℹ</span></label>
-          <input type="number" id="colRoyalty" value="500" min="0" max="10000">
-        </div>
-      </div>
-
-      <div class="g2">
-        <div class="field">
-          <label>Creator Address</label>
-          <input type="text" id="colCreator" placeholder="Solana wallet address">
-        </div>
-        <div class="field">
-          <label>Creator Share (%)</label>
-          <input type="number" id="colCreatorShare" value="100" min="1" max="100">
-        </div>
-      </div>
-
-      <div class="g2">
-        <div class="field">
-          <label>Output Image Size</label>
-          <select id="colSize-px">
-            <option value="512">512 × 512</option>
-            <option value="1024" selected>1024 × 1024</option>
-            <option value="2048">2048 × 2048</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Output Format</label>
-          <select id="colFormat">
-            <option value="png" selected>PNG (lossless)</option>
-            <option value="jpeg">JPEG (compressed)</option>
-            <option value="webp">WebP (optimised)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="g2">
-        <div class="field">
-          <label>Start Index</label>
-          <input type="number" id="colStartIndex" value="0" min="0">
-        </div>
-        <div class="field">
-          <label>Name Pattern <span data-tip="Use {n} for number">ℹ</span></label>
-          <input type="text" id="colNamePattern" placeholder="{name} #{n}" value="{name} #{n}">
-        </div>
-      </div>
-
-      <div class="field">
-        <label>
-          <input type="checkbox" id="colAllowDupes" style="width:auto;min-height:auto;margin-right:6px;">
-          Allow duplicate combinations
-        </label>
-      </div>
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: SINGLE NFT
+════════════════════════════════════════════════════════════════ -->
+<div class="page active" id="page-single">
+<div class="page-hdr"><div><div class="page-title">> Single NFT Studio</div><div class="page-desc">Create & export a single NFT with full metadata</div></div></div>
+<div class="g2" style="align-items:start">
+<div>
+  <div class="panel">
+    <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Canvas</div></div><div class="psts" id="sCanvasSts">Empty</div></div>
+    <div class="canvas-wrap" id="sCanvasWrap">
+      <div class="canvas-ph" id="sPH"><div class="icon">◈</div><div>UPLOAD IMAGE</div><div style="font-size:.52rem;">PNG · JPG · WEBP · GIF · SVG</div></div>
+      <canvas id="sCanvas" style="display:none"></canvas>
     </div>
-
-    <!-- Layer Manager -->
-    <div class="panel">
-      <div class="mbar">
-        <div class="mbar-l"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="mlbl">BASIS://LAYER-MANAGER</div></div>
-        <div class="msts" id="layerStatus">0 LAYERS</div>
-      </div>
-
-      <h2>&gt; TRAIT LAYERS</h2>
-      <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:16px;">
-        Add layers from bottom to top (e.g. Background → Body → Eyes → Accessories). Each layer is a trait. Upload multiple images per layer — each image is one trait value.
-      </p>
-
-      <div class="layer-list" id="layerList"></div>
-
-      <div class="btn-row">
-        <button class="btn btn-primary" id="addLayerBtn">[ + ADD LAYER ]</button>
-        <button class="btn btn-sm" id="clearLayersBtn">[ CLEAR ALL ]</button>
-      </div>
+    <div class="btn-row">
+      <label class="btn btn-p" style="cursor:pointer;position:relative">Upload<input type="file" accept="image/*" id="sUpload" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+      <button class="btn" id="sClear" disabled>Clear</button>
     </div>
-
-    <!-- Generate -->
-    <div class="panel">
-      <div class="mbar">
-        <div class="mbar-l"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="mlbl">BASIS://GENERATE</div></div>
-        <div class="msts" id="genStatus">READY</div>
-      </div>
-
-      <div class="g2" style="align-items:end;gap:14px;margin-bottom:14px;">
-        <div class="kv">
-          <div class="kv-row"><span class="kv-k">Layers</span><span class="kv-v" id="statLayers">0</span></div>
-          <div class="kv-row"><span class="kv-k">Total Traits</span><span class="kv-v" id="statTraits">0</span></div>
-          <div class="kv-row"><span class="kv-k">Max Combinations</span><span class="kv-v" id="statCombos">0</span></div>
-          <div class="kv-row"><span class="kv-k">Target Supply</span><span class="kv-v" id="statTarget">100</span></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <button class="btn btn-primary btn-full" id="generateBtn">[ GENERATE COLLECTION ]</button>
-          <button class="btn btn-full" id="previewBtn" disabled>[ REFRESH PREVIEW ]</button>
-        </div>
-      </div>
-
-      <div class="progress-wrap" id="genProgress">
-        <div class="progress-label">
-          <span id="genProgressLabel">Generating…</span>
-          <span id="genProgressPct">0%</span>
-        </div>
-        <div class="progress-track"><div class="progress-fill" id="genProgressFill"></div></div>
-      </div>
-
-      <div class="status-bar" id="genStatusBar"></div>
-
-      <!-- Preview Grid -->
-      <div id="previewGridWrap" style="display:none;">
-        <hr>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-          <h3 style="margin:0;">&gt; PREVIEW <span id="previewCount" style="color:var(--text-dim);font-weight:400;"></span></h3>
-          <div style="display:flex;gap:8px;">
-            <select id="previewPageSize" style="padding:5px 10px;min-height:30px;font-size:0.72rem;">
-              <option value="20">20 per page</option>
-              <option value="50">50 per page</option>
-              <option value="100">100 per page</option>
-            </select>
-            <button class="btn btn-sm" id="prevPage">‹ PREV</button>
-            <span id="pageIndicator" style="font-size:0.72rem;color:var(--text-dim);align-self:center;"></span>
-            <button class="btn btn-sm" id="nextPage">NEXT ›</button>
-          </div>
-        </div>
-        <div class="preview-grid" id="previewGrid"></div>
-      </div>
-
-      <hr>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="exportColBtn" disabled>[ EXPORT COLLECTION ZIP ]</button>
-        <button class="btn" id="exportMetaOnlyBtn" disabled>[ EXPORT METADATA ONLY ]</button>
-      </div>
-      <div class="progress-wrap" id="exportProgress">
-        <div class="progress-label">
-          <span id="exportProgressLabel">Exporting…</span>
-          <span id="exportProgressPct">0%</span>
-        </div>
-        <div class="progress-track"><div class="progress-fill" id="exportProgressFill"></div></div>
-      </div>
-      <div class="status-bar" id="exportStatusBar"></div>
+  </div>
+  <div class="panel">
+    <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Export Settings</div></div><div class="psts">Config</div></div>
+    <div class="g2">
+      <div class="field"><label>Size</label><select id="sSize"><option value="256">256×256</option><option value="512">512×512</option><option value="1024" selected>1024×1024</option><option value="2048">2048×2048</option></select></div>
+      <div class="field"><label>Format</label><select id="sFmt"><option value="png" selected>PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></div>
     </div>
-
-  </div><!-- /tab-collection -->
-
-  <!-- ════════════════════════════════════
-       TAB 3 · METADATA EDITOR
-  ════════════════════════════════════ -->
-  <div class="tab-panel" id="tab-metadata">
-    <div class="panel">
-      <div class="mbar">
-        <div class="mbar-l"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="mlbl">BASIS://METADATA-EDITOR</div></div>
-        <div class="msts" id="metaEditorStatus">READY</div>
-      </div>
-
-      <h2>&gt; METAPLEX METADATA EDITOR</h2>
-
-      <div class="g2" style="margin-bottom:16px;">
-        <div>
-          <span class="section-label">Templates</span>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm" id="tplSingle">SINGLE NFT</button>
-            <button class="btn btn-sm" id="tplCollection">COLLECTION ITEM</button>
-            <button class="btn btn-sm" id="tplFT">FUNGIBLE TOKEN</button>
-          </div>
-        </div>
-        <div>
-          <span class="section-label">Actions</span>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm" id="metaValidateBtn">[ VALIDATE ]</button>
-            <button class="btn btn-sm" id="metaFormatBtn">[ FORMAT ]</button>
-            <button class="btn btn-sm" id="metaCopyBtn">[ COPY ]</button>
-            <button class="btn btn-sm btn-primary" id="metaDownBtn">[ DOWNLOAD ]</button>
-          </div>
-        </div>
-      </div>
-
-      <textarea class="meta-editor" id="metaEditor" spellcheck="false" placeholder='Paste or edit Metaplex metadata JSON here…'></textarea>
-
-      <div class="status-bar" id="metaStatusBar" style="margin-top:10px;"></div>
-
-      <hr>
-      <h3>&gt; METAPLEX STANDARD FIELDS</h3>
-      <div class="g3" style="font-size:0.74rem;color:var(--text-dim);gap:10px;">
-        <div class="kv">
-          <div class="kv-row"><span class="kv-k">name</span><span class="kv-v" style="font-size:0.68rem;">string *</span></div>
-          <div class="kv-row"><span class="kv-k">symbol</span><span class="kv-v" style="font-size:0.68rem;">string</span></div>
-          <div class="kv-row"><span class="kv-k">description</span><span class="kv-v" style="font-size:0.68rem;">string</span></div>
-          <div class="kv-row"><span class="kv-k">image</span><span class="kv-v" style="font-size:0.68rem;">string (uri) *</span></div>
-        </div>
-        <div class="kv">
-          <div class="kv-row"><span class="kv-k">seller_fee_basis_points</span><span class="kv-v" style="font-size:0.68rem;">0–10000</span></div>
-          <div class="kv-row"><span class="kv-k">external_url</span><span class="kv-v" style="font-size:0.68rem;">string (uri)</span></div>
-          <div class="kv-row"><span class="kv-k">attributes</span><span class="kv-v" style="font-size:0.68rem;">array</span></div>
-          <div class="kv-row"><span class="kv-k">collection</span><span class="kv-v" style="font-size:0.68rem;">object</span></div>
-        </div>
-        <div class="kv">
-          <div class="kv-row"><span class="kv-k">properties.files</span><span class="kv-v" style="font-size:0.68rem;">array</span></div>
-          <div class="kv-row"><span class="kv-k">properties.category</span><span class="kv-v" style="font-size:0.68rem;">image|video|audio</span></div>
-          <div class="kv-row"><span class="kv-k">properties.creators</span><span class="kv-v" style="font-size:0.68rem;">array *</span></div>
-          <div class="kv-row"><span class="kv-k">animation_url</span><span class="kv-v" style="font-size:0.68rem;">string (uri)</span></div>
-        </div>
-      </div>
+    <div class="g2">
+      <div class="field"><label>Quality</label><div style="display:flex;align-items:center;gap:6px"><input type="range" id="sQual" min="60" max="100" value="95" style="flex:1"><span id="sQualV" style="font-size:.64rem;width:26px;text-align:right;color:var(--text-dim)">95</span></div></div>
+      <div class="field"><label>Background</label><select id="sBg"><option value="transparent">Transparent</option><option value="#000000">Black</option><option value="#ffffff">White</option></select></div>
     </div>
-  </div><!-- /tab-metadata -->
+    <div class="btn-row"><button class="btn btn-p" id="sDownImg" disabled>Download Image</button><button class="btn" id="sDownMeta" disabled>Download JSON</button></div>
+  </div>
+</div>
+<div>
+  <div class="panel">
+    <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Metadata</div></div><div class="psts">Metaplex</div></div>
+    <div class="field"><label>Name *</label><input type="text" id="sName" placeholder="My NFT #1"></div>
+    <div class="field"><label>Symbol</label><input type="text" id="sSymbol" placeholder="NFT" maxlength="10"></div>
+    <div class="field"><label>Description</label><textarea id="sDesc" rows="2" placeholder="Describe your NFT…"></textarea></div>
+    <hr>
+    <div class="g2">
+      <div class="field"><label>External URL</label><input type="url" id="sExtUrl" placeholder="https://…"></div>
+      <div class="field"><label>Royalty (bps)</label><input type="number" id="sRoyalty" value="500" min="0" max="10000"></div>
+    </div>
+    <div class="field"><label>Creator Wallet</label><input type="text" id="sCreator" placeholder="Solana address"></div>
+    <hr>
+    <h3>> Attributes</h3>
+    <div class="attr-list" id="sAttrList"></div>
+    <button class="btn btn-sm" id="sAddAttr">+ Attribute</button>
+    <hr>
+    <h3>> JSON Preview</h3>
+    <pre class="meta-editor" id="sMetaPre" style="min-height:120px;font-size:.64rem;cursor:default;overflow:auto;resize:none" readonly></pre>
+  </div>
+</div>
+</div>
+</div>
 
-</div><!-- /wrap -->
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: LAYERS & TRAITS
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-layers">
+<div class="page-hdr"><div><div class="page-title">> Layers & Traits</div><div class="page-desc">Build layer stack, upload trait assets, drag to reorder traits within layers</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Collection Config</div></div><div class="psts">Settings</div></div>
+  <div class="g3">
+    <div class="field"><label>Collection Name *</label><input type="text" id="cName" placeholder="My Collection"></div>
+    <div class="field"><label>Symbol</label><input type="text" id="cSymbol" placeholder="MYNFT" maxlength="10"></div>
+    <div class="field"><label>Supply</label><input type="number" id="cSize" value="100" min="1" max="10000"></div>
+  </div>
+  <div class="g3">
+    <div class="field"><label>Description</label><input type="text" id="cDesc" placeholder="…"></div>
+    <div class="field"><label>External URL</label><input type="url" id="cExtUrl" placeholder="https://…"></div>
+    <div class="field"><label>Royalty (bps)</label><input type="number" id="cRoyalty" value="500" min="0" max="10000"></div>
+  </div>
+  <div class="g3">
+    <div class="field"><label>Creator</label><input type="text" id="cCreator" placeholder="Solana wallet"></div>
+    <div class="field"><label>Share %</label><input type="number" id="cShare" value="100" min="1" max="100"></div>
+    <div class="field"><label>Start Index</label><input type="number" id="cStartIdx" value="0" min="0"></div>
+  </div>
+  <div class="g3">
+    <div class="field"><label>Image Size</label><select id="cImgSize"><option value="512">512</option><option value="1024" selected>1024</option><option value="2048">2048</option><option value="4096">4096</option></select></div>
+    <div class="field"><label>Format</label><select id="cFmt"><option value="png" selected>PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></div>
+    <div class="field"><label>Name Pattern</label><input type="text" id="cPattern" value="{name} #{n}"></div>
+  </div>
+  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-top:4px"><input type="checkbox" id="cDupes"> Allow duplicate combinations</label>
+</div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Layer Manager</div></div><div class="psts" id="layerSts">0 Layers</div></div>
+  <p style="font-size:.66rem;color:var(--text-dim);margin-bottom:10px">Layers stack bottom→top. Drag <strong style="color:var(--a70)">⠿</strong> to reorder layers. <strong style="color:var(--a70)">Drag trait thumbnails</strong> within a layer to swap positions. Mark layers as <em>optional</em> for "None" chance.</p>
+  <div class="layer-list" id="layerList"></div>
+  <div class="btn-row"><button class="btn btn-p" id="addLayerBtn">+ Add Layer</button><button class="btn btn-sm btn-d" id="clearLayersBtn">Clear All</button></div>
+</div>
+</div>
 
-<!-- JSZip loaded from CDN above -->
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: RARITY SYSTEM
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-rarity">
+<div class="page-hdr"><div><div class="page-title">> Rarity System</div><div class="page-desc">Assign weights and rarity tiers to every trait</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Tier Classification</div></div><div class="psts">Legend</div></div>
+  <div class="tier-legend">
+    <div class="tier-legend-item"><span class="tier-dot legendary"></span> Legendary (&lt;3%)</div>
+    <div class="tier-legend-item"><span class="tier-dot epic"></span> Epic (3–8%)</div>
+    <div class="tier-legend-item"><span class="tier-dot rare"></span> Rare (8–18%)</div>
+    <div class="tier-legend-item"><span class="tier-dot uncommon"></span> Uncommon (18–35%)</div>
+    <div class="tier-legend-item"><span class="tier-dot common"></span> Common (&gt;35%)</div>
+  </div>
+  <p style="font-size:.64rem;color:var(--text-dim);margin-top:4px">Tiers are auto-assigned based on each trait's percentage within its layer. Adjust weights below — the tier badge updates in real time.</p>
+</div>
+<div id="rarityEditor"><div style="color:var(--text-mute);font-size:.68rem;padding:16px;text-align:center">Add layers & traits first.</div></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: TRAIT RULES
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-rules">
+<div class="page-hdr"><div><div class="page-title">> Trait Rules</div><div class="page-desc">Define conflicts & dependencies between traits</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Rules Engine</div></div><div class="psts" id="rulesSts">0 Rules</div></div>
+  <p style="font-size:.64rem;color:var(--text-dim);margin-bottom:10px"><span style="color:var(--neg);font-weight:700">NEVER</span> = these two traits cannot co-exist. <span style="color:var(--warn);font-weight:700">REQUIRES</span> = if trait A is picked, trait B must also appear.</p>
+  <div id="rulesList"></div>
+  <div class="btn-row"><button class="btn btn-p" id="addRuleBtn">+ Add Rule</button></div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: GENERATE
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-generate">
+<div class="page-hdr"><div><div class="page-title">> Generate Collection</div><div class="page-desc">Run the engine and create your NFTs</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Engine</div></div><div class="psts" id="genSts">Ready</div></div>
+  <div class="g2" style="align-items:end;gap:10px;margin-bottom:10px">
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Layers</span><span class="kv-v" id="stL">0</span></div>
+      <div class="kv-row"><span class="kv-k">Traits</span><span class="kv-v" id="stT">0</span></div>
+      <div class="kv-row"><span class="kv-k">Max Unique</span><span class="kv-v" id="stC">0</span></div>
+      <div class="kv-row"><span class="kv-k">Target</span><span class="kv-v" id="stTgt">100</span></div>
+      <div class="kv-row"><span class="kv-k">Rules</span><span class="kv-v" id="stR">0</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button class="btn btn-p btn-full" id="generateBtn" style="font-size:.72rem;min-height:40px">▶ GENERATE COLLECTION</button>
+    </div>
+  </div>
+  <div class="prog-wrap" id="genProg"><div class="prog-lbl"><span id="genProgL">…</span><span id="genProgP">0%</span></div><div class="prog-track"><div class="prog-fill" id="genProgF"></div></div></div>
+  <div class="status-bar" id="genStatus"></div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: PREVIEW & FILTER
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-preview">
+<div class="page-hdr"><div><div class="page-title">> Preview & Filter</div><div class="page-desc">Browse, inspect, and filter your generated collection</div></div></div>
+<div class="panel" id="previewPanel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Collection Grid</div></div><div class="psts" id="previewCount">0</div></div>
+  <div class="filter-bar">
+    <select id="filterLayer"><option value="">All layers</option></select>
+    <select id="filterTrait"><option value="">All traits</option></select>
+    <select id="filterTier"><option value="">All tiers</option><option value="legendary">Legendary</option><option value="epic">Epic</option><option value="rare">Rare</option><option value="uncommon">Uncommon</option><option value="common">Common</option></select>
+    <input type="text" id="filterSearch" placeholder="Search #id…" style="max-width:100px">
+    <div style="flex:1"></div>
+    <select id="pageSize"><option value="24">24</option><option value="48" selected>48</option><option value="96">96</option></select>
+    <button class="btn btn-xs" id="prevPg">‹</button>
+    <span id="pgInd" style="font-size:.58rem;color:var(--text-dim)"></span>
+    <button class="btn btn-xs" id="nextPg">›</button>
+  </div>
+  <div class="preview-grid" id="previewGrid"></div>
+  <div id="noGenMsg" style="color:var(--text-mute);font-size:.68rem;padding:16px;text-align:center">Generate a collection first.</div>
+</div>
+<div class="panel" id="rarityReportPanel" style="display:none">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Rarity Distribution Report</div></div><div class="psts">Actual vs Target</div></div>
+  <div id="rarityReport"></div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: EXPORT
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-export">
+<div class="page-hdr"><div><div class="page-title">> Export</div><div class="page-desc">Download your collection as ZIP with images + metadata</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Export</div></div><div class="psts" id="expSts">Ready</div></div>
+  <div class="btn-row" style="margin-top:0">
+    <button class="btn btn-p" id="exportZipBtn" disabled style="font-size:.70rem;min-height:36px">⬇ Export Collection ZIP</button>
+    <button class="btn" id="exportMetaBtn" disabled>Metadata Only</button>
+    <button class="btn" id="exportImgBtn" disabled>Images Only</button>
+  </div>
+  <div class="prog-wrap" id="expProg"><div class="prog-lbl"><span id="expProgL">…</span><span id="expProgP">0%</span></div><div class="prog-track"><div class="prog-fill" id="expProgF"></div></div></div>
+  <div class="status-bar" id="expStatus"></div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: METADATA EDITOR
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-metadata">
+<div class="page-hdr"><div><div class="page-title">> Metadata Editor</div><div class="page-desc">Edit & validate Metaplex JSON</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Editor</div></div><div class="psts" id="metaSts">Ready</div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+    <span class="slbl" style="align-self:center;margin:0">Templates:</span>
+    <button class="btn btn-xs" id="tplSingle">Single</button>
+    <button class="btn btn-xs" id="tplCol">Collection</button>
+    <button class="btn btn-xs" id="tplFT">Fungible</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-xs" id="metaVal">Validate</button>
+    <button class="btn btn-xs" id="metaFmt">Format</button>
+    <button class="btn btn-xs" id="metaCopy">Copy</button>
+    <button class="btn btn-xs btn-p" id="metaDl">Download</button>
+  </div>
+  <textarea class="meta-editor" id="metaEditor" spellcheck="false" placeholder='Paste Metaplex JSON…'></textarea>
+  <div class="status-bar" id="metaStatusBar"></div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: PROJECT
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-project">
+<div class="page-hdr"><div><div class="page-title">> Project Manager</div><div class="page-desc">Save & load project state (layers, config, rules, rarity)</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Save / Load</div></div><div class="psts">Local</div></div>
+  <p style="font-size:.64rem;color:var(--text-dim);margin-bottom:10px">Export your project configuration (layers, rarity weights, rules, settings) as a JSON file. Reload it anytime to continue working. <strong style="color:var(--warn)">Note:</strong> Image data is included (base64), so large projects may produce large files.</p>
+  <div class="btn-row" style="margin-top:0">
+    <button class="btn btn-p" id="projSave">💾 Save Project</button>
+    <label class="btn" style="cursor:pointer;position:relative">📂 Load Project<input type="file" accept=".json" id="projLoad" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></label>
+  </div>
+  <div class="status-bar" id="projStatus"></div>
+</div>
+</div>
+
+</main>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="detailModal">
+<div class="modal">
+  <button class="modal-close" id="modalClose">✕</button>
+  <h2 id="modalTitle" style="margin-bottom:4px">NFT #0</h2>
+  <div id="modalTierBadge" style="margin-bottom:8px"></div>
+  <canvas id="modalCanvas" class="modal-img"></canvas>
+  <div class="modal-traits" id="modalTraits"></div>
+  <div class="btn-row" style="justify-content:center">
+    <button class="btn btn-sm" id="modalDlImg">Image</button>
+    <button class="btn btn-sm" id="modalDlMeta">JSON</button>
+    <button class="btn btn-sm btn-d" id="modalRegen">Regenerate</button>
+    <button class="btn btn-sm" id="modalPrev">← Prev</button>
+    <button class="btn btn-sm" id="modalNext">Next →</button>
+  </div>
+</div>
+</div>
+
 <script>
 'use strict';
+/* ══════════════════════════════════════
+   GLOBALS
+══════════════════════════════════════ */
+let LAYERS=[],RULES=[],GEN=[],curPage=0,modalIdx=-1;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-// ═══════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showSt(id,msg,t='info'){const e=$(id);if(!e)return;e.textContent=msg;e.className=`status-bar show ${t}`}
+function hideSt(id){$(id)?.classList.remove('show')}
+function setProg(f,p,l,pct,lbl){const a=$(f),b=$(p),c=$(l);if(a)a.style.width=pct+'%';if(b)b.textContent=Math.round(pct)+'%';if(c&&lbl)c.textContent=lbl}
+function showProg(id){$(id)?.classList.add('show')}
+function hideProg(id){$(id)?.classList.remove('show')}
+function dlBlob(blob,name){const u=URL.createObjectURL(blob);const a=Object.assign(document.createElement('a'),{href:u,download:name});document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
+function c2b(cv,fmt,q){return new Promise(r=>{cv.toBlob(b=>r(b),fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp',q/100)})}
+function getTier(pct){if(pct<3)return'legendary';if(pct<8)return'epic';if(pct<18)return'rare';if(pct<35)return'uncommon';return'common'}
+function tierLabel(t){return t.charAt(0).toUpperCase()+t.slice(1)}
+function tierHTML(tier){return `<span class="tier-badge ${tier}"><span class="tier-dot ${tier}"></span>${tierLabel(tier)}</span>`}
 
-function showStatus(elId, msg, type='info'){
-  const el = document.getElementById(elId);
-  if(!el) return;
-  el.textContent = msg;
-  el.className   = `status-bar show ${type}`;
+/* ══ NAV ══ */
+function nav(p){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===p));
+  document.querySelectorAll('.m-tab').forEach(n=>n.classList.toggle('active',n.dataset.page===p));
+  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===`page-${p}`));
+  if(p==='rarity')renderRarity();
+  if(p==='generate'||p==='preview')updateStats();
 }
-function hideStatus(elId){
-  const el = document.getElementById(elId);
-  if(el) el.classList.remove('show');
-}
+document.querySelectorAll('.nav-item,.m-tab').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.page)));
 
-function setProgress(fillId, pctId, labelId, pct, label){
-  const fill = document.getElementById(fillId);
-  const pctEl = document.getElementById(pctId);
-  const lblEl = document.getElementById(labelId);
-  if(fill)  fill.style.width  = pct+'%';
-  if(pctEl) pctEl.textContent = Math.round(pct)+'%';
-  if(lblEl && label) lblEl.textContent = label;
-}
+/* ══════════════════════════════════════
+   SINGLE NFT
+══════════════════════════════════════ */
+let sImg=null,sAttrs=[];
+$('sQual').oninput=e=>{$('sQualV').textContent=e.target.value};
+$('sUpload').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader;r.onload=ev=>{const img=new Image;img.onload=()=>{sImg=img;renderSP();$('sPH').style.display='none';$('sCanvas').style.display='block';$('sCanvasSts').textContent=`${img.naturalWidth}×${img.naturalHeight}`;$('sClear').disabled=$('sDownImg').disabled=$('sDownMeta').disabled=false;updSMeta()};img.src=ev.target.result};r.readAsDataURL(f)};
+function renderSP(){if(!sImg)return;const sz=Math.min(parseInt($('sSize').value)||1024,340),c=$('sCanvas'),bg=$('sBg').value;c.width=c.height=sz;const x=c.getContext('2d');if(bg!=='transparent'){x.fillStyle=bg;x.fillRect(0,0,sz,sz)}else x.clearRect(0,0,sz,sz);x.drawImage(sImg,0,0,sz,sz)}
+$('sClear').onclick=()=>{sImg=null;$('sCanvas').style.display='none';$('sPH').style.display='flex';$('sCanvasSts').textContent='Empty';$('sClear').disabled=$('sDownImg').disabled=$('sDownMeta').disabled=true;$('sMetaPre').textContent='';$('sUpload').value=''};
+$('sSize').onchange=$('sBg').onchange=()=>{if(sImg)renderSP()};
+$('sDownImg').onclick=async()=>{if(!sImg)return;const sz=parseInt($('sSize').value)||1024,fmt=$('sFmt').value,q=parseInt($('sQual').value),bg=$('sBg').value,c=document.createElement('canvas');c.width=c.height=sz;const x=c.getContext('2d');if(bg!=='transparent'){x.fillStyle=bg;x.fillRect(0,0,sz,sz)}x.drawImage(sImg,0,0,sz,sz);dlBlob(await c2b(c,fmt,q),`${($('sName').value||'nft').replace(/\s+/g,'_').toLowerCase()}.${fmt==='jpeg'?'jpg':fmt}`)};
+$('sDownMeta').onclick=()=>{const m=buildSMeta();dlBlob(new Blob([JSON.stringify(m,null,2)],{type:'application/json'}),`${($('sName').value||'nft').replace(/\s+/g,'_').toLowerCase()}.json`)};
+$('sAddAttr').onclick=()=>{sAttrs.push({trait_type:'',value:''});renderSAttrs()};
+function renderSAttrs(){const l=$('sAttrList');l.innerHTML=sAttrs.map((a,i)=>`<div class="attr-row"><input type="text" placeholder="Trait" value="${esc(a.trait_type)}" data-i="${i}" data-k="trait_type" style="min-height:24px"><input type="text" placeholder="Value" value="${esc(a.value)}" data-i="${i}" data-k="value" style="min-height:24px"><button class="btn btn-xs btn-d" data-del="${i}">✕</button></div>`).join('');l.querySelectorAll('input').forEach(inp=>inp.oninput=e=>{sAttrs[+e.target.dataset.i][e.target.dataset.k]=e.target.value;updSMeta()});l.querySelectorAll('[data-del]').forEach(b=>b.onclick=e=>{sAttrs.splice(+e.target.dataset.del,1);renderSAttrs();updSMeta()})}
+function buildSMeta(fn){const n=$('sName').value||'NFT',f=$('sFmt').value,ext=f==='jpeg'?'jpg':f,name=fn||`${n.replace(/\s+/g,'_').toLowerCase()}.${ext}`,mime=f==='png'?'image/png':f==='jpeg'?'image/jpeg':'image/webp';return{name:n,symbol:$('sSymbol').value||'NFT',description:$('sDesc').value||'',seller_fee_basis_points:parseInt($('sRoyalty').value)||0,image:name,external_url:$('sExtUrl').value||'',attributes:sAttrs.filter(a=>a.trait_type||a.value),properties:{files:[{uri:name,type:mime}],category:'image',creators:$('sCreator').value?[{address:$('sCreator').value,share:100}]:[]}}}
+function updSMeta(){$('sMetaPre').textContent=JSON.stringify(buildSMeta(),null,2)}
+['sName','sSymbol','sDesc','sExtUrl','sRoyalty','sCreator'].forEach(id=>$(id)?.addEventListener('input',updSMeta));
 
-function showProgress(wrapId){ document.getElementById(wrapId)?.classList.add('show'); }
-function hideProgress(wrapId){ document.getElementById(wrapId)?.classList.remove('show'); }
-
-function downloadBlob(blob, filename){
-  const url = URL.createObjectURL(blob);
-  const a   = Object.assign(document.createElement('a'),{href:url,download:filename});
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-}
-
-function canvasToBlob(canvas, format, quality){
-  return new Promise(res => {
-    const mime = format==='png'?'image/png':format==='jpeg'?'image/jpeg':'image/webp';
-    const q    = quality/100;
-    canvas.toBlob(blob => res(blob), mime, q);
-  });
-}
-
-async function canvasToDataURL(canvas, format, quality){
-  const mime = format==='png'?'image/png':format==='jpeg'?'image/jpeg':'image/webp';
-  return canvas.toDataURL(mime, quality/100);
-}
-
-// Draw image onto canvas with background
-function drawImageOnCanvas(canvas, img, size, bg){
-  canvas.width  = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if(bg && bg !== 'transparent'){
-    ctx.fillStyle = bg==='black'?'#000':bg==='white'?'#fff':bg;
-    ctx.fillRect(0,0,size,size);
-  } else {
-    ctx.clearRect(0,0,size,size);
-  }
-  ctx.drawImage(img,0,0,size,size);
-}
-
-// ═══════════════════════════════════════════════
-//  TABS
-// ═══════════════════════════════════════════════
-document.getElementById('mainTabs').addEventListener('click', e=>{
-  const btn = e.target.closest('.tab');
-  if(!btn) return;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-});
-
-// ═══════════════════════════════════════════════
-//  SECTION 1 · SINGLE NFT STUDIO
-// ═══════════════════════════════════════════════
-let singleImg = null;
-
-const singleUpload  = document.getElementById('singleUpload');
-const singleCanvas  = document.getElementById('singleCanvas');
-const singleCtx     = singleCanvas.getContext('2d');
-
-// Size select
-document.getElementById('singleSize').addEventListener('change', e=>{
-  document.getElementById('customSizeRow').style.display = e.target.value==='custom'?'grid':'none';
-  if(singleImg) renderSinglePreview();
-});
-
-// Quality display
-document.getElementById('singleQuality').addEventListener('input', e=>{
-  document.getElementById('singleQualityVal').textContent = e.target.value+'%';
-});
-
-// BG select
-document.getElementById('singleBg').addEventListener('change', e=>{
-  document.getElementById('customBgField').style.display = e.target.value==='custom'?'block':'none';
-  if(singleImg) renderSinglePreview();
-});
-
-document.getElementById('customBgColor').addEventListener('input', ()=>{ if(singleImg) renderSinglePreview(); });
-
-singleUpload.addEventListener('change', e=>{
-  const file = e.target.files?.[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = ()=>{
-      singleImg = img;
-      renderSinglePreview();
-      document.getElementById('singlePlaceholder').style.display='none';
-      singleCanvas.style.display='block';
-      document.getElementById('singleCanvasStatus').textContent = `${img.naturalWidth}×${img.naturalHeight}`;
-      document.getElementById('singleClearBtn').disabled=false;
-      document.getElementById('singleDownloadBtn').disabled=false;
-      document.getElementById('singleMetaDownloadBtn').disabled=false;
-      updateSingleMetaPreview();
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-});
-
-function getSingleSize(){
-  const sel = document.getElementById('singleSize').value;
-  if(sel==='custom'){
-    return {
-      w: parseInt(document.getElementById('customW').value)||1024,
-      h: parseInt(document.getElementById('customH').value)||1024
-    };
-  }
-  return {w:parseInt(sel),h:parseInt(sel)};
-}
-
-function getSingleBg(){
-  const v = document.getElementById('singleBg').value;
-  if(v==='custom') return document.getElementById('customBgColor').value||'transparent';
-  return v;
-}
-
-function renderSinglePreview(){
-  if(!singleImg) return;
-  const {w,h} = getSingleSize();
-  const bg    = getSingleBg();
-  const displaySize = Math.min(w,h,420);
-  singleCanvas.width  = displaySize;
-  singleCanvas.height = displaySize;
-  const ctx = singleCanvas.getContext('2d');
-  if(bg && bg!=='transparent'){
-    ctx.fillStyle = bg==='black'?'#000':bg==='white'?'#fff':bg;
-    ctx.fillRect(0,0,displaySize,displaySize);
-  } else {
-    ctx.clearRect(0,0,displaySize,displaySize);
-  }
-  ctx.drawImage(singleImg,0,0,displaySize,displaySize);
-}
-
-document.getElementById('singleClearBtn').addEventListener('click',()=>{
-  singleImg=null;
-  singleCanvas.style.display='none';
-  document.getElementById('singlePlaceholder').style.display='flex';
-  document.getElementById('singleCanvasStatus').textContent='EMPTY';
-  document.getElementById('singleClearBtn').disabled=true;
-  document.getElementById('singleDownloadBtn').disabled=true;
-  document.getElementById('singleMetaDownloadBtn').disabled=true;
-  document.getElementById('singleMetaPreview').textContent='';
-  singleUpload.value='';
-});
-
-// Download image
-document.getElementById('singleDownloadBtn').addEventListener('click', async()=>{
-  if(!singleImg) return;
-  const {w,h}  = getSingleSize();
-  const bg     = getSingleBg();
-  const fmt    = document.getElementById('singleFormat').value;
-  const qual   = parseInt(document.getElementById('singleQuality').value);
-  const name   = (document.getElementById('singleName').value||'nft').replace(/\s+/g,'_').toLowerCase();
-  const ext    = fmt==='jpeg'?'jpg':fmt;
-
-  const offCanvas    = document.createElement('canvas');
-  offCanvas.width    = w;
-  offCanvas.height   = h;
-  const offCtx = offCanvas.getContext('2d');
-  if(bg && bg!=='transparent'){
-    offCtx.fillStyle = bg==='black'?'#000':bg==='white'?'#fff':bg;
-    offCtx.fillRect(0,0,w,h);
-  }
-  offCtx.drawImage(singleImg,0,0,w,h);
-  const blob = await canvasToBlob(offCanvas, fmt, qual);
-  downloadBlob(blob, `${name}.${ext}`);
-});
-
-// Download metadata
-document.getElementById('singleMetaDownloadBtn').addEventListener('click',()=>{
-  const meta = buildSingleMeta();
-  const blob = new Blob([JSON.stringify(meta,null,2)],{type:'application/json'});
-  const name = (document.getElementById('singleName').value||'nft').replace(/\s+/g,'_').toLowerCase();
-  downloadBlob(blob,`${name}.json`);
-});
-
-// Attributes
-let singleAttrs = [];
-
-document.getElementById('addAttrBtn').addEventListener('click',()=>{
-  singleAttrs.push({trait_type:'',value:''});
-  renderSingleAttrs();
-});
-
-function renderSingleAttrs(){
-  const list = document.getElementById('singleAttrList');
-  list.innerHTML = singleAttrs.map((a,i)=>`
-    <div class="attr-row">
-      <input type="text" placeholder="Trait Type" value="${esc(a.trait_type)}" data-i="${i}" data-k="trait_type">
-      <input type="text" placeholder="Value" value="${esc(a.value)}" data-i="${i}" data-k="value">
-      <button class="btn btn-sm btn-danger" data-del="${i}">✕</button>
-      <button class="btn btn-sm" data-up="${i}" title="Move up">↑</button>
-    </div>`).join('');
-
-  list.querySelectorAll('input').forEach(inp=>{
-    inp.addEventListener('input', e=>{
-      const i=+e.target.dataset.i, k=e.target.dataset.k;
-      singleAttrs[i][k]=e.target.value;
-      updateSingleMetaPreview();
-    });
-  });
-  list.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      singleAttrs.splice(+e.target.dataset.del,1);
-      renderSingleAttrs(); updateSingleMetaPreview();
-    });
-  });
-  list.querySelectorAll('[data-up]').forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const i=+e.target.dataset.up;
-      if(i>0){[singleAttrs[i],singleAttrs[i-1]]=[singleAttrs[i-1],singleAttrs[i]];renderSingleAttrs();}
-    });
-  });
-}
-
-// Build & preview metadata
-function buildSingleMeta(imageFilename){
-  const name     = document.getElementById('singleName').value||'NFT';
-  const symbol   = document.getElementById('singleSymbol').value||'NFT';
-  const desc     = document.getElementById('singleDesc').value||'';
-  const extUrl   = document.getElementById('singleExtUrl').value||'';
-  const royalty  = parseInt(document.getElementById('singleRoyalty').value)||0;
-  const creator  = document.getElementById('singleCreator').value||'';
-  const fmt      = document.getElementById('singleFormat').value;
-  const ext      = fmt==='jpeg'?'jpg':fmt;
-  const fname    = imageFilename || ((name.replace(/\s+/g,'_').toLowerCase())+'.'+ext);
-  const mime     = fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp';
-
-  const meta = {
-    name,
-    symbol,
-    description: desc,
-    seller_fee_basis_points: royalty,
-    image: fname,
-    external_url: extUrl,
-    attributes: singleAttrs.filter(a=>a.trait_type||a.value).map(a=>({trait_type:a.trait_type,value:a.value})),
-    properties:{
-      files:[{uri:fname,type:mime}],
-      category:'image',
-      creators: creator ? [{address:creator,share:100}] : []
-    }
-  };
-  return meta;
-}
-
-function updateSingleMetaPreview(){
-  const pre = document.getElementById('singleMetaPreview');
-  pre.textContent = JSON.stringify(buildSingleMeta(),null,2);
-}
-
-['singleName','singleSymbol','singleDesc','singleExtUrl','singleRoyalty','singleCreator'].forEach(id=>{
-  document.getElementById(id)?.addEventListener('input',updateSingleMetaPreview);
-});
-
-// ═══════════════════════════════════════════════
-//  SECTION 2 · COLLECTION BUILDER
-// ═══════════════════════════════════════════════
-let LAYERS = [];         // [{name, files:[{name,img,rarity}], order}]
-let GENERATED = [];      // [{traits:{layerName:traitName}, canvas}]
-let currentPage = 0;
-
-// Update stats
+/* ══════════════════════════════════════
+   LAYERS & TRAITS
+══════════════════════════════════════ */
 function updateStats(){
-  const n = LAYERS.length;
-  const t = LAYERS.reduce((s,l)=>s+l.files.length,0);
-  const combos = LAYERS.reduce((p,l)=>p*(l.files.length||1),1);
-  document.getElementById('statLayers').textContent  = n;
-  document.getElementById('statTraits').textContent  = t;
-  document.getElementById('statCombos').textContent  = combos.toLocaleString();
-  document.getElementById('statTarget').textContent  = document.getElementById('colSize').value;
-  document.getElementById('layerStatus').textContent = `${n} LAYER${n!==1?'S':''}`;
+  const n=LAYERS.length,t=LAYERS.reduce((s,l)=>s+l.files.length,0);
+  const combos=LAYERS.reduce((p,l)=>p*(l.files.length+(l.optional?1:0)||1),1);
+  if($('stL'))$('stL').textContent=n;
+  if($('stT'))$('stT').textContent=t;
+  if($('stC'))$('stC').textContent=combos.toLocaleString();
+  if($('stTgt'))$('stTgt').textContent=$('cSize').value;
+  if($('stR'))$('stR').textContent=RULES.length;
+  $('layerSts').textContent=`${n} Layer${n!==1?'s':''}`;
 }
+$('cSize').oninput=updateStats;
+$('addLayerBtn').onclick=()=>{LAYERS.push({name:`Layer ${LAYERS.length+1}`,optional:false,files:[]});renderLayers();updateStats()};
+$('clearLayersBtn').onclick=()=>{if(!LAYERS.length||confirm('Clear all?')){LAYERS=[];RULES=[];GEN=[];renderLayers();updateStats()}};
 
-document.getElementById('colSize').addEventListener('input',updateStats);
-
-// Add layer
-document.getElementById('addLayerBtn').addEventListener('click',()=>{
-  const order = LAYERS.length;
-  LAYERS.push({name:`Layer ${order+1}`,files:[],order});
-  renderLayers();
-  updateStats();
-});
-
-document.getElementById('clearLayersBtn').addEventListener('click',()=>{
-  if(!LAYERS.length||confirm('Clear all layers?')){ LAYERS=[]; renderLayers(); updateStats(); GENERATED=[]; hidePreview(); }
-});
-
+/* ─ Layer drag reorder ─ */
+let dragLayerIdx=null;
 function renderLayers(){
-  const list = document.getElementById('layerList');
-  list.innerHTML='';
+  const list=$('layerList');list.innerHTML='';
   LAYERS.forEach((layer,li)=>{
-    const div = document.createElement('div');
-    div.className='layer-item';
+    const div=document.createElement('div');div.className='layer-item';div.dataset.li=li;
     div.innerHTML=`
-      <div class="layer-header">
-        <input type="text" value="${esc(layer.name)}" style="flex:1;min-height:32px;padding:5px 9px;font-size:0.80rem;" data-li="${li}" class="layer-name-inp">
-        <span class="layer-count">${layer.files.length} trait${layer.files.length!==1?'s':''}</span>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-sm" data-moveup="${li}" title="Move layer up">↑</button>
-          <button class="btn btn-sm" data-movedn="${li}" title="Move layer down">↓</button>
-          <button class="btn btn-sm btn-danger" data-remlayer="${li}">✕</button>
-        </div>
+      <div class="layer-hdr">
+        <span class="layer-drag" draggable="true" data-ldrag="${li}">⠿</span>
+        <input type="text" class="layer-name-inp" value="${esc(layer.name)}" data-lni="${li}">
+        <span class="layer-badge" id="lbadge_${li}">${layer.files.length} trait${layer.files.length!==1?'s':''}</span>
+        <label class="layer-opt-lbl"><input type="checkbox" ${layer.optional?'checked':''} data-lopt="${li}">Optional</label>
+        <button class="btn btn-xs" data-lmu="${li}" title="Up">↑</button>
+        <button class="btn btn-xs" data-lmd="${li}" title="Down">↓</button>
+        <button class="btn btn-xs btn-d" data-lrm="${li}">✕</button>
       </div>
-      <label class="btn btn-sm" style="cursor:pointer;position:relative;display:inline-flex;align-items:center;gap:6px;">
-        [ + ADD TRAITS ]
-        <input type="file" accept="image/*" multiple data-layeridx="${li}" class="layer-upload-inp" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
-      </label>
-      <div class="layer-files" id="layerFiles_${li}"></div>
-    `;
+      <label class="btn btn-sm" style="cursor:pointer;position:relative;display:inline-flex">+ Traits<input type="file" accept="image/*" multiple data-lul="${li}" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></label>
+      <div class="trait-grid" id="tg_${li}"></div>`;
     list.appendChild(div);
-
-    // Render existing thumbs
-    renderLayerThumbs(li);
-
-    // Name input
-    div.querySelector('.layer-name-inp').addEventListener('input', e=>{
-      LAYERS[li].name=e.target.value;
-    });
-
-    // Move up/down
-    div.querySelector(`[data-moveup="${li}"]`)?.addEventListener('click',()=>{
-      if(li>0){[LAYERS[li],LAYERS[li-1]]=[LAYERS[li-1],LAYERS[li]];renderLayers();updateStats();}
-    });
-    div.querySelector(`[data-movedn="${li}"]`)?.addEventListener('click',()=>{
-      if(li<LAYERS.length-1){[LAYERS[li],LAYERS[li+1]]=[LAYERS[li+1],LAYERS[li]];renderLayers();updateStats();}
-    });
-
-    // Remove layer
-    div.querySelector(`[data-remlayer="${li}"]`)?.addEventListener('click',()=>{
-      LAYERS.splice(li,1);renderLayers();updateStats();
-    });
-
-    // Upload traits
-    div.querySelector('.layer-upload-inp').addEventListener('change', e=>{
-      const files = Array.from(e.target.files);
-      let loaded=0;
-      files.forEach(file=>{
-        const reader=new FileReader();
-        reader.onload=ev=>{
-          const img=new Image();
-          img.onload=()=>{
-            LAYERS[li].files.push({name:file.name.replace(/\.[^.]+$/,''),img,rarity:1});
-            loaded++;
-            if(loaded===files.length){ renderLayerThumbs(li); updateStats(); }
-          };
-          img.src=ev.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
+    renderTraitGrid(li);
+    /* Layer events */
+    div.querySelector(`[data-lni="${li}"]`).oninput=e=>{LAYERS[li].name=e.target.value};
+    div.querySelector(`[data-lopt="${li}"]`).onchange=e=>{LAYERS[li].optional=e.target.checked;updateStats()};
+    div.querySelector(`[data-lmu="${li}"]`).onclick=()=>{if(li>0){[LAYERS[li],LAYERS[li-1]]=[LAYERS[li-1],LAYERS[li]];renderLayers();updateStats()}};
+    div.querySelector(`[data-lmd="${li}"]`).onclick=()=>{if(li<LAYERS.length-1){[LAYERS[li],LAYERS[li+1]]=[LAYERS[li+1],LAYERS[li]];renderLayers();updateStats()}};
+    div.querySelector(`[data-lrm="${li}"]`).onclick=()=>{LAYERS.splice(li,1);renderLayers();updateStats()};
+    div.querySelector(`[data-lul="${li}"]`).onchange=e=>{
+      const files=Array.from(e.target.files);let loaded=0;
+      files.forEach(file=>{const r=new FileReader;r.onload=ev=>{const img=new Image;img.onload=()=>{LAYERS[li].files.push({name:file.name.replace(/\.[^.]+$/,''),img,weight:50,dataURL:ev.target.result});loaded++;if(loaded===files.length){renderTraitGrid(li);updateStats()}};img.src=ev.target.result};r.readAsDataURL(file)});
       e.target.value='';
-    });
+    };
+    /* Layer drag */
+    const handle=div.querySelector(`[data-ldrag="${li}"]`);
+    handle.ondragstart=e=>{dragLayerIdx=li;e.dataTransfer.effectAllowed='move';div.style.opacity='.4'};
+    handle.ondragend=()=>{dragLayerIdx=null;div.style.opacity='1'};
+    div.ondragover=e=>{if(dragLayerIdx!==null&&dragLayerIdx!==li){e.preventDefault();div.classList.add('drag-over')}};
+    div.ondragleave=()=>div.classList.remove('drag-over');
+    div.ondrop=e=>{div.classList.remove('drag-over');if(dragLayerIdx!==null&&dragLayerIdx!==li){e.preventDefault();const[item]=LAYERS.splice(dragLayerIdx,1);LAYERS.splice(li,0,item);dragLayerIdx=null;renderLayers();updateStats()}};
   });
 }
 
-function renderLayerThumbs(li){
-  const container = document.getElementById(`layerFiles_${li}`);
-  if(!container) return;
-  container.innerHTML='';
-  LAYERS[li].files.forEach((f,fi)=>{
-    const thumb=document.createElement('div');
-    thumb.className='layer-thumb';
-    const canvas=document.createElement('canvas');
-    canvas.width=canvas.height=52;
-    const ctx=canvas.getContext('2d');
-    ctx.drawImage(f.img,0,0,52,52);
-    thumb.appendChild(canvas);
-
-    const namEl=document.createElement('div');
-    namEl.className='th-name';
-    namEl.textContent=f.name;
-    thumb.appendChild(namEl);
-
-    const delBtn=document.createElement('div');
-    delBtn.className='th-del';
-    delBtn.textContent='✕';
-    delBtn.addEventListener('click',()=>{
-      LAYERS[li].files.splice(fi,1);
-      renderLayerThumbs(li);
-      document.querySelector(`[data-li="${li}"] .layer-count`).textContent=`${LAYERS[li].files.length} trait${LAYERS[li].files.length!==1?'s':''}`;
-      updateStats();
-    });
-    thumb.appendChild(delBtn);
-    container.appendChild(thumb);
+/* ─ Trait drag-swap within layer ─ */
+let dragTraitInfo=null;
+function renderTraitGrid(li){
+  const c=$(`tg_${li}`);if(!c)return;c.innerHTML='';
+  const layer=LAYERS[li];
+  const totalW=layer.files.reduce((s,f)=>s+f.weight,0)+(layer.optional?50:0);
+  layer.files.forEach((f,fi)=>{
+    const pct=totalW?Math.round(f.weight/totalW*100):0;
+    const tier=getTier(pct);
+    const thumb=document.createElement('div');thumb.className='trait-thumb';thumb.draggable=true;thumb.dataset.li=li;thumb.dataset.fi=fi;
+    const cv=document.createElement('canvas');cv.width=cv.height=52;cv.getContext('2d').drawImage(f.img,0,0,52,52);thumb.appendChild(cv);
+    thumb.insertAdjacentHTML('beforeend',`<div class="t-name">${esc(f.name)}</div><div class="t-tier tier-dot ${tier}"></div><div class="t-pct">${pct}%</div>`);
+    const del=document.createElement('button');del.className='t-del';del.textContent='✕';del.onclick=e=>{e.stopPropagation();layer.files.splice(fi,1);renderTraitGrid(li);updateStats()};
+    thumb.appendChild(del);
+    /* Trait drag */
+    thumb.ondragstart=e=>{dragTraitInfo={li,fi};thumb.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.stopPropagation()};
+    thumb.ondragend=()=>{thumb.classList.remove('dragging');dragTraitInfo=null};
+    thumb.ondragover=e=>{if(dragTraitInfo&&dragTraitInfo.li===li&&dragTraitInfo.fi!==fi){e.preventDefault();e.stopPropagation();thumb.classList.add('drag-over')}};
+    thumb.ondragleave=()=>thumb.classList.remove('drag-over');
+    thumb.ondrop=e=>{e.preventDefault();e.stopPropagation();thumb.classList.remove('drag-over');if(dragTraitInfo&&dragTraitInfo.li===li&&dragTraitInfo.fi!==fi){const from=dragTraitInfo.fi,to=fi;[layer.files[from],layer.files[to]]=[layer.files[to],layer.files[from]];dragTraitInfo=null;renderTraitGrid(li)}};
+    c.appendChild(thumb);
   });
-  const layerItem=container.closest('.layer-item');
-  if(layerItem){
-    const cnt=layerItem.querySelector('.layer-count');
-    if(cnt) cnt.textContent=`${LAYERS[li].files.length} trait${LAYERS[li].files.length!==1?'s':''}`;
-  }
+  const badge=$(`lbadge_${li}`);if(badge)badge.textContent=`${layer.files.length} trait${layer.files.length!==1?'s':''}`;
 }
 
-// Generate collection
-document.getElementById('generateBtn').addEventListener('click', async()=>{
-  if(!LAYERS.length){ showStatus('genStatusBar','Add at least one layer before generating.','warn'); return; }
-  const hasFiles = LAYERS.every(l=>l.files.length>0);
-  if(!hasFiles){ showStatus('genStatusBar','Every layer must have at least one trait image.','warn'); return; }
-
-  const targetSize = parseInt(document.getElementById('colSize').value)||100;
-  const allowDupes = document.getElementById('colAllowDupes').checked;
-  const maxCombos  = LAYERS.reduce((p,l)=>p*l.files.length,1);
-
-  if(!allowDupes && targetSize>maxCombos){
-    showStatus('genStatusBar',`Only ${maxCombos.toLocaleString()} unique combinations possible. Enable duplicates or reduce collection size.`,'warn');
-    return;
-  }
-
-  GENERATED=[];
-  hideStatus('genStatusBar');
-  showProgress('genProgress');
-  setProgress('genProgressFill','genProgressPct','genProgressLabel',0,'Generating combinations…');
-  document.getElementById('generateBtn').disabled=true;
-  document.getElementById('genStatus').textContent='GENERATING';
-  document.getElementById('exportColBtn').disabled=true;
-  document.getElementById('exportMetaOnlyBtn').disabled=true;
-
-  const seen = new Set();
-  let attempts=0;
-  const maxAttempts=targetSize*20;
-
-  while(GENERATED.length < targetSize && attempts < maxAttempts){
-    attempts++;
-    // Pick random trait from each layer, respecting rarity weights
-    const traits={};
-    const combo=LAYERS.map(layer=>{
-      const total=layer.files.reduce((s,f)=>s+(f.rarity??1),0);
-      let r=Math.random()*total, chosen=layer.files[layer.files.length-1];
-      for(const f of layer.files){ r-=(f.rarity??1); if(r<=0){chosen=f;break;} }
-      traits[layer.name]=chosen.name;
-      return chosen;
+/* ══════════════════════════════════════
+   RARITY SYSTEM
+══════════════════════════════════════ */
+function renderRarity(){
+  const c=$('rarityEditor');
+  if(!LAYERS.length||LAYERS.every(l=>!l.files.length)){c.innerHTML='<div style="color:var(--text-mute);font-size:.68rem;padding:16px;text-align:center">Add layers & traits first.</div>';return}
+  let html='';
+  LAYERS.forEach((layer,li)=>{
+    if(!layer.files.length)return;
+    const totalW=layer.files.reduce((s,f)=>s+f.weight,0)+(layer.optional?50:0);
+    html+=`<div class="panel rarity-layer" id="rl_${li}">
+      <div class="rarity-layer-hdr"><h3 style="margin:0">${esc(layer.name)} ${layer.optional?'<span style="font-size:.54rem;color:var(--text-dim)">(optional)</span>':''}</h3>
+      <div class="presets">
+        <button class="preset-btn" data-rp="equal" data-rli="${li}">Equal</button>
+        <button class="preset-btn" data-rp="linear" data-rli="${li}">Linear</button>
+        <button class="preset-btn" data-rp="expo" data-rli="${li}">Exponential</button>
+        <button class="preset-btn" data-rp="legend" data-rli="${li}">1 Legendary</button>
+        <button class="preset-btn" data-rp="tiered" data-rli="${li}">Auto-Tier</button>
+      </div></div>`;
+    if(layer.optional){const np=totalW?Math.round(50/totalW*100):0;html+=`<div class="rarity-row" style="opacity:.55"><div class="r-thumb" style="background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.5rem;color:var(--text-mute)">∅</div><span class="r-name">None</span><div class="r-slider" style="opacity:.4"><input type="range" disabled></div><span class="r-weight">50</span><span class="r-pct" style="color:var(--common)">${np}%</span><span class="r-tier">${tierHTML(getTier(np))}</span></div>`}
+    layer.files.forEach((f,fi)=>{
+      const pct=totalW?Math.round(f.weight/totalW*100):0;const tier=getTier(pct);
+      html+=`<div class="rarity-row"><div class="r-thumb"><canvas id="rtc_${li}_${fi}" width="24" height="24"></canvas></div><span class="r-name" title="${esc(f.name)}">${esc(f.name)}</span><div class="r-slider"><input type="range" min="1" max="200" value="${f.weight}" data-rli="${li}" data-rfi="${fi}" class="rslider"></div><span class="r-weight" id="rw_${li}_${fi}">${f.weight}</span><span class="r-pct" id="rp_${li}_${fi}" style="color:var(--${tier})">${pct}%</span><span class="r-tier" id="rt_${li}_${fi}">${tierHTML(tier)}</span></div>`;
     });
-
-    const key=JSON.stringify(traits);
-    if(!allowDupes && seen.has(key)) continue;
-    seen.add(key);
-
-    GENERATED.push({traits, combo, canvas:null});
-    const pct=(GENERATED.length/targetSize)*100;
-    setProgress('genProgressFill','genProgressPct','genProgressLabel',pct,`Generated ${GENERATED.length}/${targetSize}…`);
-
-    // Yield every 50 to keep UI responsive
-    if(GENERATED.length%50===0) await new Promise(r=>setTimeout(r,0));
-  }
-
-  setProgress('genProgressFill','genProgressPct','genProgressLabel',100,`Complete — ${GENERATED.length} NFTs generated`);
-  document.getElementById('generateBtn').disabled=false;
-  document.getElementById('previewBtn').disabled=false;
-  document.getElementById('exportColBtn').disabled=false;
-  document.getElementById('exportMetaOnlyBtn').disabled=false;
-  document.getElementById('genStatus').textContent='DONE';
-
-  if(GENERATED.length<targetSize){
-    showStatus('genStatusBar',`Generated ${GENERATED.length}/${targetSize} (exhausted unique combinations). Enable duplicates or add more traits.`,'warn');
-  } else {
-    showStatus('genStatusBar',`✓ ${GENERATED.length} NFTs generated successfully.`,'ok');
-  }
-
-  currentPage=0;
-  await renderPreviewGrid();
-});
-
-document.getElementById('previewBtn').addEventListener('click',async()=>{ currentPage=0; await renderPreviewGrid(); });
-
-// Pagination
-document.getElementById('prevPage').addEventListener('click',async()=>{ if(currentPage>0){currentPage--;await renderPreviewGrid();} });
-document.getElementById('nextPage').addEventListener('click',async()=>{
-  const ps=parseInt(document.getElementById('previewPageSize').value);
-  if((currentPage+1)*ps<GENERATED.length){currentPage++;await renderPreviewGrid();}
-});
-document.getElementById('previewPageSize').addEventListener('change',async()=>{ currentPage=0; await renderPreviewGrid(); });
-
-async function renderPreviewGrid(){
-  if(!GENERATED.length) return;
-  const grid=document.getElementById('previewGrid');
-  const wrap=document.getElementById('previewGridWrap');
-  const ps   =parseInt(document.getElementById('previewPageSize').value);
-  const start=currentPage*ps;
-  const slice=GENERATED.slice(start,start+ps);
-  const outSize=parseInt(document.getElementById('colSize-px').value)||1024;
-  const thumbSize=100;
-
-  wrap.style.display='block';
-  document.getElementById('previewCount').textContent=`(${GENERATED.length} total)`;
-  document.getElementById('pageIndicator').textContent=`Page ${currentPage+1} / ${Math.ceil(GENERATED.length/ps)}`;
-
-  grid.innerHTML='';
-  for(let i=0;i<slice.length;i++){
-    const item=slice[i];
-    const cell=document.createElement('div');
-    cell.className='preview-cell';
-    const c=document.createElement('canvas');
-    c.width=c.height=thumbSize;
-    const ctx=c.getContext('2d');
-    // Composite layers
-    for(const layer of item.combo){
-      ctx.drawImage(layer.img,0,0,thumbSize,thumbSize);
+    /* Distribution chart */
+    html+=`<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--border)"><h3 style="font-size:.60rem;margin-bottom:4px">Distribution</h3>`;
+    layer.files.forEach((f,fi)=>{const pct=totalW?Math.round(f.weight/totalW*100):0;const tier=getTier(pct);html+=`<div class="dist-row"><span class="d-name">${esc(f.name)}</span><div class="d-bar"><div class="d-fill" style="width:${pct}%;background:var(--${tier})" id="df_${li}_${fi}"></div></div><span class="d-pct" id="dp_${li}_${fi}" style="color:var(--${tier})">${pct}%</span></div>`});
+    html+=`</div></div>`;
+  });
+  c.innerHTML=html;
+  /* Draw thumbs */
+  LAYERS.forEach((l,li)=>l.files.forEach((f,fi)=>{const cv=$(`rtc_${li}_${fi}`);if(cv)cv.getContext('2d').drawImage(f.img,0,0,24,24)}));
+  /* Slider events */
+  c.querySelectorAll('.rslider').forEach(sl=>sl.oninput=e=>{
+    const li=+e.target.dataset.rli,fi=+e.target.dataset.rfi;
+    LAYERS[li].files[fi].weight=+e.target.value;
+    updRarityRow(li);
+  });
+  /* Preset events */
+  c.querySelectorAll('.preset-btn').forEach(btn=>btn.onclick=()=>{
+    const li=+btn.dataset.rli,p=btn.dataset.rp,files=LAYERS[li].files;
+    if(p==='equal')files.forEach(f=>f.weight=50);
+    else if(p==='linear')files.forEach((f,i)=>f.weight=Math.max(1,100-Math.round(i*(90/(files.length-1||1)))));
+    else if(p==='expo')files.forEach((f,i)=>f.weight=Math.max(1,Math.round(100*Math.pow(0.45,i))));
+    else if(p==='legend'){files.forEach(f=>f.weight=50);if(files.length)files[files.length-1].weight=2}
+    else if(p==='tiered'){
+      /* Auto-distribute into tiers: 40% common, 25% uncommon, 18% rare, 12% epic, 5% legendary */
+      const n=files.length;if(!n)return;
+      const tiers=[{pct:.40,w:80},{pct:.25,w:40},{pct:.18,w:18},{pct:.12,w:8},{pct:.05,w:2}];
+      files.forEach((f,i)=>{const tierIdx=Math.min(Math.floor(i/Math.max(1,n/5)),4);f.weight=tiers[tierIdx].w});
     }
-    item.canvas=c; // cache
-    const num=document.createElement('div');
-    num.className='pc-num';
-    num.textContent=`#${start+i+parseInt(document.getElementById('colStartIndex').value||0)}`;
-    cell.appendChild(c);
-    cell.appendChild(num);
-    // tooltip with traits
-    cell.title=Object.entries(item.traits).map(([k,v])=>`${k}: ${v}`).join('\n');
-    grid.appendChild(cell);
-    if(i%20===0) await new Promise(r=>setTimeout(r,0));
+    renderRarity();
+  });
+}
+
+function updRarityRow(li){
+  const layer=LAYERS[li];const totalW=layer.files.reduce((s,f)=>s+f.weight,0)+(layer.optional?50:0);
+  layer.files.forEach((f,fi)=>{
+    const pct=totalW?Math.round(f.weight/totalW*100):0;const tier=getTier(pct);
+    const rw=$(`rw_${li}_${fi}`),rp=$(`rp_${li}_${fi}`),rt=$(`rt_${li}_${fi}`),df=$(`df_${li}_${fi}`),dp=$(`dp_${li}_${fi}`);
+    if(rw)rw.textContent=f.weight;
+    if(rp){rp.textContent=pct+'%';rp.style.color=`var(--${tier})`}
+    if(rt)rt.innerHTML=tierHTML(tier);
+    if(df){df.style.width=pct+'%';df.style.background=`var(--${tier})`}
+    if(dp){dp.textContent=pct+'%';dp.style.color=`var(--${tier})`}
+  });
+}
+
+/* ══════════════════════════════════════
+   TRAIT RULES
+══════════════════════════════════════ */
+$('addRuleBtn').onclick=()=>{RULES.push({type:'never',layerA:'',traitA:'',layerB:'',traitB:''});renderRules();updateStats()};
+function renderRules(){
+  const c=$('rulesList');$('rulesSts').textContent=`${RULES.length} Rule${RULES.length!==1?'s':''}`;
+  if(!RULES.length){c.innerHTML='<div style="color:var(--text-mute);font-size:.66rem">No rules.</div>';return}
+  c.innerHTML=RULES.map((rule,ri)=>{
+    const lo=LAYERS.map((l,i)=>`<option value="${i}" ${rule.layerA===i?'selected':''}>${esc(l.name)}</option>`).join('');
+    const lb=LAYERS.map((l,i)=>`<option value="${i}" ${rule.layerB===i?'selected':''}>${esc(l.name)}</option>`).join('');
+    const ta=rule.layerA!==''&&LAYERS[rule.layerA]?LAYERS[rule.layerA].files.map(f=>`<option value="${esc(f.name)}" ${rule.traitA===f.name?'selected':''}>${esc(f.name)}</option>`).join(''):'';
+    const tb=rule.layerB!==''&&LAYERS[rule.layerB]?LAYERS[rule.layerB].files.map(f=>`<option value="${esc(f.name)}" ${rule.traitB===f.name?'selected':''}>${esc(f.name)}</option>`).join(''):'';
+    return `<div class="rule-item">
+      <select data-ri="${ri}" data-rf="type" style="width:80px"><option value="never" ${rule.type==='never'?'selected':''}>Never</option><option value="requires" ${rule.type==='requires'?'selected':''}>Requires</option></select>
+      <span class="rule-type ${rule.type}">${rule.type==='never'?'NEVER':'REQ'}</span>
+      <select data-ri="${ri}" data-rf="layerA"><option value="">Layer…</option>${lo}</select>
+      <select data-ri="${ri}" data-rf="traitA"><option value="">Trait…</option>${ta}</select>
+      <span style="color:var(--text-dim);font-size:.58rem">${rule.type==='never'?'WITH':'NEEDS'}</span>
+      <select data-ri="${ri}" data-rf="layerB"><option value="">Layer…</option>${lb}</select>
+      <select data-ri="${ri}" data-rf="traitB"><option value="">Trait…</option>${tb}</select>
+      <button class="btn btn-xs btn-d" data-rrm="${ri}">✕</button></div>`}).join('');
+  c.querySelectorAll('select').forEach(s=>s.onchange=e=>{const ri=+e.target.dataset.ri,f=e.target.dataset.rf;RULES[ri][f]=f==='layerA'||f==='layerB'?(e.target.value===''?'':+e.target.value):e.target.value;if(f==='layerA')RULES[ri].traitA='';if(f==='layerB')RULES[ri].traitB='';renderRules()});
+  c.querySelectorAll('[data-rrm]').forEach(b=>b.onclick=()=>{RULES.splice(+b.dataset.rrm,1);renderRules();updateStats()});
+}
+
+/* ══════════════════════════════════════
+   GENERATE
+══════════════════════════════════════ */
+function checkRules(traits){
+  for(const r of RULES){
+    if(r.layerA===''||r.layerB===''||!r.traitA||!r.traitB)continue;
+    const lA=LAYERS[r.layerA]?.name,lB=LAYERS[r.layerB]?.name;if(!lA||!lB)continue;
+    const vA=traits[lA],vB=traits[lB];
+    if(r.type==='never'&&vA===r.traitA&&vB===r.traitB)return false;
+    if(r.type==='requires'&&vA===r.traitA&&vB!==r.traitB)return false;
+  }return true;
+}
+
+$('generateBtn').onclick=async()=>{
+  if(!LAYERS.length){showSt('genStatus','Add layers first.','warn');return}
+  if(!LAYERS.every(l=>l.files.length)){showSt('genStatus','Every layer needs traits.','warn');return}
+  const target=parseInt($('cSize').value)||100,dupes=$('cDupes').checked;
+  const combos=LAYERS.reduce((p,l)=>p*(l.files.length+(l.optional?1:0)),1);
+  if(!dupes&&target>combos){showSt('genStatus',`Only ${combos.toLocaleString()} unique combos. Enable dupes or add traits.`,'warn');return}
+  GEN=[];hideSt('genStatus');showProg('genProg');setProg('genProgF','genProgP','genProgL',0,'Generating…');
+  $('generateBtn').disabled=true;$('genSts').textContent='RUNNING';
+  $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=true;
+  const seen=new Set;let att=0;const maxAtt=target*80;
+  while(GEN.length<target&&att<maxAtt){
+    att++;const traits={},combo=[];
+    for(const layer of LAYERS){
+      const wts=layer.files.map(f=>f.weight);let tw=wts.reduce((a,b)=>a+b,0);
+      if(layer.optional)tw+=50;
+      let r=Math.random()*tw;
+      if(layer.optional){r-=50;if(r<=0){traits[layer.name]=null;combo.push(null);continue}}
+      let chosen=layer.files[layer.files.length-1];
+      for(let i=0;i<layer.files.length;i++){r-=layer.files[i].weight;if(r<=0){chosen=layer.files[i];break}}
+      traits[layer.name]=chosen.name;combo.push(chosen);
+    }
+    const key=JSON.stringify(traits);
+    if(!dupes&&seen.has(key))continue;
+    if(!checkRules(traits))continue;
+    seen.add(key);GEN.push({traits,combo});
+    if(GEN.length%100===0){setProg('genProgF','genProgP','genProgL',(GEN.length/target)*100,`${GEN.length}/${target}`);await new Promise(r=>setTimeout(r,0))}
   }
+  setProg('genProgF','genProgP','genProgL',100,`Done — ${GEN.length}`);
+  $('generateBtn').disabled=false;$('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=false;
+  $('genSts').textContent='DONE';
+  GEN.length<target?showSt('genStatus',`${GEN.length}/${target} generated. Exhausted combos/rules.`,'warn'):showSt('genStatus',`✓ ${GEN.length} NFTs generated.`,'ok');
+  curPage=0;populateFilters();renderPreview();renderRarityReport();
+};
+
+/* ══════════════════════════════════════
+   PREVIEW & FILTER
+══════════════════════════════════════ */
+function populateFilters(){
+  const fl=$('filterLayer');fl.innerHTML='<option value="">All layers</option>';
+  LAYERS.forEach(l=>fl.innerHTML+=`<option value="${esc(l.name)}">${esc(l.name)}</option>`);
+}
+$('filterLayer').onchange=()=>{const ln=$('filterLayer').value,ft=$('filterTrait');ft.innerHTML='<option value="">All traits</option>';if(ln){const l=LAYERS.find(l=>l.name===ln);l?.files.forEach(f=>ft.innerHTML+=`<option value="${esc(f.name)}">${esc(f.name)}</option>`);if(l?.optional)ft.innerHTML+='<option value="__none__">None</option>'}curPage=0;renderPreview()};
+$('filterTrait').onchange=$('filterTier').onchange=$('filterSearch').oninput=()=>{curPage=0;renderPreview()};
+$('pageSize').onchange=()=>{curPage=0;renderPreview()};
+$('prevPg').onclick=()=>{if(curPage>0){curPage--;renderPreview()}};
+$('nextPg').onclick=()=>{const ps=parseInt($('pageSize').value),f=getFiltered();if((curPage+1)*ps<f.length){curPage++;renderPreview()}};
+
+function getTraitTier(layerName,traitName){
+  const layer=LAYERS.find(l=>l.name===layerName);if(!layer)return'common';
+  const totalW=layer.files.reduce((s,f)=>s+f.weight,0)+(layer.optional?50:0);
+  if(traitName===null)return getTier(totalW?Math.round(50/totalW*100):0);
+  const f=layer.files.find(f=>f.name===traitName);if(!f)return'common';
+  return getTier(totalW?Math.round(f.weight/totalW*100):0);
 }
 
-function hidePreview(){
-  document.getElementById('previewGridWrap').style.display='none';
+function getFiltered(){
+  let items=GEN.map((item,idx)=>({...item,idx}));
+  const ln=$('filterLayer').value,tn=$('filterTrait').value,tier=$('filterTier').value,search=$('filterSearch').value.trim();
+  if(ln&&tn){items=tn==='__none__'?items.filter(i=>i.traits[ln]===null):items.filter(i=>i.traits[ln]===tn)}
+  else if(ln){items=items.filter(i=>i.traits[ln]!==undefined)}
+  if(tier){items=items.filter(i=>{for(const[k,v]of Object.entries(i.traits)){if(getTraitTier(k,v)===tier)return true}return false})}
+  if(search){const si=parseInt($('cStartIdx').value)||0;items=items.filter(i=>`#${si+i.idx}`.includes(search))}
+  return items;
 }
 
-// Export ZIP
-document.getElementById('exportColBtn').addEventListener('click', async()=>{
-  if(!GENERATED.length){ showStatus('exportStatusBar','Generate a collection first.','warn'); return; }
-  const zip=new JSZip();
-  const fmt=document.getElementById('colFormat').value;
+function renderPreview(){
+  const grid=$('previewGrid'),filtered=getFiltered(),ps=parseInt($('pageSize').value),start=curPage*ps,slice=filtered.slice(start,start+ps);
+  const si=parseInt($('cStartIdx').value)||0,thumbSz=82;
+  $('previewCount').textContent=`${filtered.length}/${GEN.length}`;
+  $('pgInd').textContent=`${curPage+1}/${Math.ceil(filtered.length/ps)||1}`;
+  $('noGenMsg').style.display=GEN.length?'none':'block';
+  grid.innerHTML='';
+  slice.forEach(item=>{
+    const cell=document.createElement('div');cell.className='preview-cell';
+    const c=document.createElement('canvas');c.width=c.height=thumbSz;const x=c.getContext('2d');
+    for(const l of item.combo)if(l?.img)x.drawImage(l.img,0,0,thumbSz,thumbSz);
+    cell.appendChild(c);
+    cell.insertAdjacentHTML('beforeend',`<div class="pc-num">#${si+item.idx}</div>`);
+    cell.onclick=()=>openModal(item.idx);
+    grid.appendChild(cell);
+  });
+  $('rarityReportPanel').style.display=GEN.length?'block':'none';
+}
+
+function renderRarityReport(){
+  if(!GEN.length)return;const rep=$('rarityReport');let html='';
+  LAYERS.forEach(layer=>{
+    const counts={};let noneCount=0;
+    GEN.forEach(i=>{const v=i.traits[layer.name];v===null?noneCount++:counts[v]=(counts[v]||0)+1});
+    html+=`<div style="margin-bottom:12px"><h3 style="margin-bottom:3px">${esc(layer.name)}</h3>`;
+    if(layer.optional&&noneCount){const p=(noneCount/GEN.length*100).toFixed(1);const t=getTier(parseFloat(p));html+=`<div class="dist-row"><span class="d-name" style="opacity:.5">None</span><div class="d-bar"><div class="d-fill" style="width:${p}%;background:var(--${t})"></div></div><span class="d-pct" style="color:var(--${t})">${p}% (${noneCount}) ${tierHTML(t)}</span></div>`}
+    Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([name,count])=>{
+      const p=(count/GEN.length*100).toFixed(1);const t=getTier(parseFloat(p));
+      html+=`<div class="dist-row"><span class="d-name">${esc(name)}</span><div class="d-bar"><div class="d-fill" style="width:${p}%;background:var(--${t})"></div></div><span class="d-pct" style="color:var(--${t})">${p}% (${count}) ${tierHTML(t)}</span></div>`;
+    });
+    html+=`</div>`;
+  });
+  rep.innerHTML=html;
+}
+
+/* ══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+function openModal(idx){
+  modalIdx=idx;const item=GEN[idx],si=parseInt($('cStartIdx').value)||0;
+  $('modalTitle').textContent=`NFT #${si+idx}`;
+  const c=$('modalCanvas'),sz=360;c.width=c.height=sz;c.style.maxWidth='100%';
+  const x=c.getContext('2d');x.clearRect(0,0,sz,sz);
+  for(const l of item.combo)if(l?.img)x.drawImage(l.img,0,0,sz,sz);
+  /* Compute overall rarity score (average tier) */
+  const tierScores={legendary:5,epic:4,rare:3,uncommon:2,common:1};
+  let totalScore=0,traitCount=0;
+  const tl=$('modalTraits');tl.innerHTML='';
+  LAYERS.forEach(layer=>{
+    const v=item.traits[layer.name];const tier=getTraitTier(layer.name,v);
+    totalScore+=tierScores[tier]||1;traitCount++;
+    tl.innerHTML+=`<div class="mt-row"><span class="mt-k">${esc(layer.name)}</span><span class="mt-v">${v===null?'None':esc(v)} ${tierHTML(tier)}</span></div>`;
+  });
+  const avgScore=traitCount?totalScore/traitCount:1;
+  const overallTier=avgScore>=4.5?'legendary':avgScore>=3.5?'epic':avgScore>=2.5?'rare':avgScore>=1.5?'uncommon':'common';
+  $('modalTierBadge').innerHTML=`Overall: ${tierHTML(overallTier)} (score: ${avgScore.toFixed(1)})`;
+  $('detailModal').classList.add('show');
+}
+$('modalClose').onclick=()=>$('detailModal').classList.remove('show');
+$('detailModal').onclick=e=>{if(e.target===$('detailModal'))$('detailModal').classList.remove('show')};
+$('modalPrev').onclick=()=>{if(modalIdx>0)openModal(modalIdx-1)};
+$('modalNext').onclick=()=>{if(modalIdx<GEN.length-1)openModal(modalIdx+1)};
+$('modalDlImg').onclick=async()=>{if(modalIdx<0)return;const item=GEN[modalIdx],sz=parseInt($('cImgSize').value)||1024,fmt=$('cFmt').value,c=document.createElement('canvas');c.width=c.height=sz;const x=c.getContext('2d');for(const l of item.combo)if(l?.img)x.drawImage(l.img,0,0,sz,sz);dlBlob(await c2b(c,fmt,95),`${(parseInt($('cStartIdx').value)||0)+modalIdx}.${fmt==='jpeg'?'jpg':fmt}`)};
+$('modalDlMeta').onclick=()=>{if(modalIdx<0)return;const m=buildMeta(modalIdx);dlBlob(new Blob([JSON.stringify(m,null,2)],{type:'application/json'}),`${(parseInt($('cStartIdx').value)||0)+modalIdx}.json`)};
+$('modalRegen').onclick=()=>{if(modalIdx<0)return;for(let att=0;att<2000;att++){const traits={},combo=[];for(const layer of LAYERS){const wts=layer.files.map(f=>f.weight);let tw=wts.reduce((a,b)=>a+b,0);if(layer.optional)tw+=50;let r=Math.random()*tw;if(layer.optional){r-=50;if(r<=0){traits[layer.name]=null;combo.push(null);continue}}let chosen=layer.files[layer.files.length-1];for(let i=0;i<layer.files.length;i++){r-=layer.files[i].weight;if(r<=0){chosen=layer.files[i];break}}traits[layer.name]=chosen.name;combo.push(chosen)}if(!checkRules(traits))continue;GEN[modalIdx]={traits,combo};openModal(modalIdx);renderPreview();renderRarityReport();break}};
+
+function buildMeta(idx){
+  const item=GEN[idx],si=parseInt($('cStartIdx').value)||0,i=si+idx,fmt=$('cFmt').value,ext=fmt==='jpeg'?'jpg':fmt,mime=fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp';
+  const cn=$('cName').value||'Collection',pat=$('cPattern').value||'{name} #{n}';
+  return{name:pat.replace('{name}',cn).replace('{n}',i),symbol:$('cSymbol').value||'NFT',description:$('cDesc').value||'',seller_fee_basis_points:parseInt($('cRoyalty').value)||0,image:`${i}.${ext}`,external_url:$('cExtUrl').value||'',attributes:Object.entries(item.traits).filter(([,v])=>v!==null).map(([k,v])=>({trait_type:k,value:v})),properties:{files:[{uri:`${i}.${ext}`,type:mime}],category:'image',creators:$('cCreator').value?[{address:$('cCreator').value,share:parseInt($('cShare').value)||100}]:[]}};
+}
+
+/* ══════════════════════════════════════
+   EXPORT
+══════════════════════════════════════ */
+$('exportZipBtn').onclick=async()=>{await doExport('full')};
+$('exportMetaBtn').onclick=async()=>{await doExport('meta')};
+$('exportImgBtn').onclick=async()=>{await doExport('img')};
+
+async function doExport(mode){
+  if(!GEN.length){showSt('expStatus','Generate first.','warn');return}
+
+  const fmt=$('cFmt').value;
   const ext=fmt==='jpeg'?'jpg':fmt;
-  const outSize=parseInt(document.getElementById('colSize-px').value)||1024;
+  const outSize=parseInt($('cImgSize').value)||1024;
   const qual=95;
-  const colName=document.getElementById('colName').value||'collection';
-  const colSymbol=document.getElementById('colSymbol').value||'NFT';
-  const colDesc=document.getElementById('colDesc').value||'';
-  const extUrl=document.getElementById('colExtUrl').value||'';
-  const royalty=parseInt(document.getElementById('colRoyalty').value)||0;
-  const creator=document.getElementById('colCreator').value||'';
-  const creatorShare=parseInt(document.getElementById('colCreatorShare').value)||100;
-  const startIdx=parseInt(document.getElementById('colStartIndex').value||0);
-  const pattern=document.getElementById('colNamePattern').value||'{name} #{n}';
+  const colName=$('cName').value||'collection';
+  const colSymbol=$('cSymbol').value||'NFT';
+  const colDesc=$('cDesc').value||'';
+  const extUrl=$('cExtUrl').value||'';
+  const royalty=parseInt($('cRoyalty').value)||0;
+  const creator=$('cCreator').value||'';
+  const creatorShare=parseInt($('cShare').value)||100;
+  const startIdx=parseInt($('cStartIdx').value||0);
+  const pattern=$('cPattern').value||'{name} #{n}';
   const mime=fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp';
 
-  const imgFolder  = zip.folder('images');
-  const metaFolder = zip.folder('metadata');
+  const zip=new JSZip();
+  const imgFolder=(mode==='full'||mode==='img')?zip.folder('images'):null;
+  const metaFolder=(mode==='full'||mode==='meta')?zip.folder('metadata'):null;
 
-  showProgress('exportProgress');
-  setProgress('exportProgressFill','exportProgressPct','exportProgressLabel',0,'Rendering images…');
-  document.getElementById('exportColBtn').disabled=true;
-  hideStatus('exportStatusBar');
+  showProg('expProg');
+  setProg('expProgF','expProgP','expProgL',0,'Rendering images…');
+  $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=true;
+  hideSt('expStatus');
+  $('expSts').textContent='EXPORTING';
 
-  const offCanvas=document.createElement('canvas');
-  offCanvas.width=offCanvas.height=outSize;
-  const offCtx=offCanvas.getContext('2d');
+  // Render images — exact same pattern as original
+  if(imgFolder){
+    const offCanvas=document.createElement('canvas');
+    offCanvas.width=offCanvas.height=outSize;
+    const offCtx=offCanvas.getContext('2d');
 
-  for(let i=0;i<GENERATED.length;i++){
-    const item=GENERATED[i];
-    const idx=startIdx+i;
-    const imgName=`${idx}.${ext}`;
-    const nftName=pattern.replace('{name}',colName).replace('{n}',idx);
+    for(let i=0;i<GEN.length;i++){
+      const item=GEN[i];
+      const idx=startIdx+i;
+      const imgName=`${idx}.${ext}`;
 
-    // Render full-res image
-    offCtx.clearRect(0,0,outSize,outSize);
-    for(const layer of item.combo){
-      offCtx.drawImage(layer.img,0,0,outSize,outSize);
-    }
-    const blob=await canvasToBlob(offCanvas,fmt,qual);
-    const buf=await blob.arrayBuffer();
-    imgFolder.file(imgName, buf);
-
-    // Build metadata JSON
-    const meta={
-      name: nftName,
-      symbol: colSymbol,
-      description: colDesc,
-      seller_fee_basis_points: royalty,
-      image: imgName,
-      external_url: extUrl,
-      attributes: Object.entries(item.traits).map(([trait_type,value])=>({trait_type,value})),
-      properties:{
-        files:[{uri:imgName,type:mime}],
-        category:'image',
-        creators: creator?[{address:creator,share:creatorShare}]:[]
+      offCtx.clearRect(0,0,outSize,outSize);
+      for(const layer of item.combo){
+        if(layer&&layer.img) offCtx.drawImage(layer.img,0,0,outSize,outSize);
       }
-    };
-    metaFolder.file(`${idx}.json`, JSON.stringify(meta,null,2));
+      const blob=await c2b(offCanvas,fmt,qual);
+      const buf=await blob.arrayBuffer();
+      imgFolder.file(imgName,buf);
 
-    const pct=((i+1)/GENERATED.length)*100;
-    setProgress('exportProgressFill','exportProgressPct','exportProgressLabel',pct,`Exporting ${i+1}/${GENERATED.length}…`);
-    if(i%10===0) await new Promise(r=>setTimeout(r,0));
+      const pct=((i+1)/GEN.length)*100;
+      setProg('expProgF','expProgP','expProgL',pct,`Exporting ${i+1}/${GEN.length}…`);
+      if(i%10===0) await new Promise(r=>setTimeout(r,0));
+    }
   }
 
-  // Collection-level metadata (collection.json)
-  const colMeta={
-    name: colName,
-    symbol: colSymbol,
-    description: colDesc,
-    seller_fee_basis_points: royalty,
-    image: 'cover.png',
-    external_url: extUrl,
-    properties:{
-      creators: creator?[{address:creator,share:creatorShare}]:[],
-      category:'image'
+  // Add metadata
+  if(metaFolder){
+    for(let i=0;i<GEN.length;i++){
+      metaFolder.file(`${startIdx+i}.json`,JSON.stringify(buildMeta(i),null,2));
     }
+  }
+
+  // Collection-level metadata
+  const colMeta={
+    name:colName,symbol:colSymbol,description:colDesc,
+    seller_fee_basis_points:royalty,image:'cover.png',external_url:extUrl,
+    properties:{creators:creator?[{address:creator,share:creatorShare}]:[],category:'image'}
   };
   zip.file('collection.json',JSON.stringify(colMeta,null,2));
 
-  // README
-  zip.file('README.txt',
-`BASIS NFT Builder Export
-========================
-Collection : ${colName}
-Symbol     : ${colSymbol}
-Supply     : ${GENERATED.length}
-Format     : ${fmt.toUpperCase()} ${outSize}x${outSize}px
-Royalty    : ${royalty} bps (${(royalty/100).toFixed(1)}%)
-Creator    : ${creator||'(not set)'}
-Generated  : ${new Date().toISOString()}
-
-Folder Structure
-----------------
-/images/     — NFT images (${idx_placeholder(startIdx)}.${ext} … ${idx_placeholder(startIdx+GENERATED.length-1)}.${ext})
-/metadata/   — Metaplex metadata JSONs (${idx_placeholder(startIdx)}.json … )
-collection.json — Collection-level metadata
-
-Upload Instructions (Metaplex / Magic Eden)
--------------------------------------------
-1. Upload images to IPFS/Arweave and update "image" URIs in metadata JSONs
-2. Deploy collection using Metaplex Sugar CLI or Candy Machine v3
-3. Verify metadata on Solscan after deployment
-
-Metaplex Sugar: https://docs.metaplex.com/developer-tools/sugar
-`);
-  function idx_placeholder(n){return n;}
-
-  setProgress('exportProgressFill','exportProgressPct','exportProgressLabel',100,'Zipping files…');
+  setProg('expProgF','expProgP','expProgL',100,'Zipping files…');
   await new Promise(r=>setTimeout(r,50));
+
   const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-  downloadBlob(zipBlob,`${colName.replace(/\s+/g,'_').toLowerCase()}_collection.zip`);
+  const suffix=mode==='meta'?'_metadata':mode==='img'?'_images':'_collection';
+  dlBlob(zipBlob,`${colName.replace(/\s+/g,'_').toLowerCase()}${suffix}.zip`);
 
-  document.getElementById('exportColBtn').disabled=false;
-  showStatus('exportStatusBar',`✓ ZIP downloaded — ${GENERATED.length} images + ${GENERATED.length} metadata files + collection.json`,'ok');
-});
-
-// Export metadata only
-document.getElementById('exportMetaOnlyBtn').addEventListener('click',async()=>{
-  if(!GENERATED.length){ showStatus('exportStatusBar','Generate a collection first.','warn'); return; }
-  const zip=new JSZip();
-  const fmt=document.getElementById('colFormat').value;
-  const ext=fmt==='jpeg'?'jpg':fmt;
-  const colName=document.getElementById('colName').value||'collection';
-  const colSymbol=document.getElementById('colSymbol').value||'NFT';
-  const colDesc=document.getElementById('colDesc').value||'';
-  const extUrl=document.getElementById('colExtUrl').value||'';
-  const royalty=parseInt(document.getElementById('colRoyalty').value)||0;
-  const creator=document.getElementById('colCreator').value||'';
-  const creatorShare=parseInt(document.getElementById('colCreatorShare').value)||100;
-  const startIdx=parseInt(document.getElementById('colStartIndex').value||0);
-  const pattern=document.getElementById('colNamePattern').value||'{name} #{n}';
-  const mime=fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp';
-
-  for(let i=0;i<GENERATED.length;i++){
-    const item=GENERATED[i];
-    const idx=startIdx+i;
-    const imgName=`${idx}.${ext}`;
-    const nftName=pattern.replace('{name}',colName).replace('{n}',idx);
-    const meta={
-      name:nftName, symbol:colSymbol, description:colDesc,
-      seller_fee_basis_points:royalty, image:imgName, external_url:extUrl,
-      attributes:Object.entries(item.traits).map(([trait_type,value])=>({trait_type,value})),
-      properties:{
-        files:[{uri:imgName,type:mime}],
-        category:'image',
-        creators:creator?[{address:creator,share:creatorShare}]:[]
-      }
-    };
-    zip.file(`${idx}.json`,JSON.stringify(meta,null,2));
-  }
-  zip.file('collection.json',JSON.stringify({name:colName,symbol:colSymbol,description:colDesc,seller_fee_basis_points:royalty,image:'cover.png',external_url:extUrl,properties:{creators:creator?[{address:creator,share:creatorShare}]:[],category:'image'}},null,2));
-  const zipBlob=await zip.generateAsync({type:'blob'});
-  downloadBlob(zipBlob,`${colName.replace(/\s+/g,'_').toLowerCase()}_metadata.zip`);
-  showStatus('exportStatusBar',`✓ Metadata ZIP downloaded — ${GENERATED.length} JSON files`,'ok');
-});
-
-// ═══════════════════════════════════════════════
-//  SECTION 3 · METADATA EDITOR
-// ═══════════════════════════════════════════════
-const metaEditor = document.getElementById('metaEditor');
-
-// Templates
-const TEMPLATES = {
-  single:{
-    name:'My NFT #1',symbol:'NFT',description:'A unique NFT on Solana.',
-    seller_fee_basis_points:500,image:'1.png',external_url:'https://yourproject.io',
-    attributes:[{trait_type:'Background',value:'Blue'},{trait_type:'Eyes',value:'Green'}],
-    properties:{files:[{uri:'1.png',type:'image/png'}],category:'image',creators:[{address:'YOUR_WALLET_ADDRESS',share:100}]}
-  },
-  collection:{
-    name:'My NFT #1',symbol:'MNFT',description:'Part of My NFT Collection on Solana.',
-    seller_fee_basis_points:500,image:'1.png',external_url:'https://yourproject.io',
-    collection:{name:'My NFT Collection',family:'My NFT'},
-    attributes:[{trait_type:'Background',value:'Blue'}],
-    properties:{files:[{uri:'1.png',type:'image/png'}],category:'image',creators:[{address:'YOUR_WALLET_ADDRESS',share:100}]}
-  },
-  ft:{
-    name:'My Token',symbol:'TKN',description:'A fungible token on Solana.',
-    seller_fee_basis_points:0,image:'token.png',
-    properties:{files:[{uri:'token.png',type:'image/png'}],category:'image',creators:[{address:'YOUR_WALLET_ADDRESS',share:100}]}
-  }
-};
-
-document.getElementById('tplSingle').addEventListener('click',()=>{
-  metaEditor.value=JSON.stringify(TEMPLATES.single,null,2);
-  validateMeta();
-});
-document.getElementById('tplCollection').addEventListener('click',()=>{
-  metaEditor.value=JSON.stringify(TEMPLATES.collection,null,2);
-  validateMeta();
-});
-document.getElementById('tplFT').addEventListener('click',()=>{
-  metaEditor.value=JSON.stringify(TEMPLATES.ft,null,2);
-  validateMeta();
-});
-
-// Validate
-function validateMeta(){
-  const txt=metaEditor.value.trim();
-  if(!txt){ hideStatus('metaStatusBar'); metaEditor.className='meta-editor'; return; }
-  try{
-    const obj=JSON.parse(txt);
-    const errors=[];
-    if(!obj.name) errors.push('Missing: name');
-    if(!obj.image) errors.push('Missing: image');
-    if(!obj.properties?.creators?.length) errors.push('Missing: properties.creators');
-    if(typeof obj.seller_fee_basis_points!=='number') errors.push('seller_fee_basis_points should be a number (0–10000)');
-    if(obj.seller_fee_basis_points>10000) errors.push('seller_fee_basis_points cannot exceed 10000');
-
-    if(errors.length){
-      showStatus('metaStatusBar','⚠ '+errors.join(' · '),'warn');
-      metaEditor.className='meta-editor meta-invalid';
-      document.getElementById('metaEditorStatus').textContent='INVALID';
-    } else {
-      showStatus('metaStatusBar','✓ Valid Metaplex metadata','ok');
-      metaEditor.className='meta-editor meta-valid';
-      document.getElementById('metaEditorStatus').textContent='VALID';
-    }
-  }catch(e){
-    showStatus('metaStatusBar','JSON parse error: '+e.message,'err');
-    metaEditor.className='meta-editor meta-invalid';
-    document.getElementById('metaEditorStatus').textContent='PARSE ERROR';
-  }
+  $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=false;
+  $('expSts').textContent='DONE';
+  showSt('expStatus',`✓ ZIP downloaded — ${GEN.length} items`,'ok');
 }
 
-metaEditor.addEventListener('input',validateMeta);
-document.getElementById('metaValidateBtn').addEventListener('click',validateMeta);
+/* ══════════════════════════════════════
+   METADATA EDITOR
+══════════════════════════════════════ */
+const TPL={
+  single:{name:'My NFT #1',symbol:'NFT',description:'A unique NFT.',seller_fee_basis_points:500,image:'1.png',external_url:'',attributes:[{trait_type:'Background',value:'Blue'}],properties:{files:[{uri:'1.png',type:'image/png'}],category:'image',creators:[{address:'WALLET',share:100}]}},
+  collection:{name:'Collection #1',symbol:'COL',description:'Part of collection.',seller_fee_basis_points:500,image:'1.png',collection:{name:'My Collection',family:'My NFT'},attributes:[{trait_type:'Background',value:'Blue'}],properties:{files:[{uri:'1.png',type:'image/png'}],category:'image',creators:[{address:'WALLET',share:100}]}},
+  ft:{name:'Token',symbol:'TKN',description:'Fungible token.',seller_fee_basis_points:0,image:'token.png',properties:{files:[{uri:'token.png',type:'image/png'}],category:'image',creators:[{address:'WALLET',share:100}]}}
+};
+$('tplSingle').onclick=()=>{$('metaEditor').value=JSON.stringify(TPL.single,null,2);valMeta()};
+$('tplCol').onclick=()=>{$('metaEditor').value=JSON.stringify(TPL.collection,null,2);valMeta()};
+$('tplFT').onclick=()=>{$('metaEditor').value=JSON.stringify(TPL.ft,null,2);valMeta()};
+function valMeta(){const t=$('metaEditor').value.trim();if(!t){hideSt('metaStatusBar');$('metaEditor').className='meta-editor';return}try{const o=JSON.parse(t);const e=[];if(!o.name)e.push('name');if(!o.image)e.push('image');if(!o.properties?.creators?.length)e.push('creators');if(e.length){showSt('metaStatusBar','Missing: '+e.join(', '),'warn');$('metaEditor').className='meta-editor meta-invalid';$('metaSts').textContent='INVALID'}else{showSt('metaStatusBar','✓ Valid','ok');$('metaEditor').className='meta-editor meta-valid';$('metaSts').textContent='VALID'}}catch(e){showSt('metaStatusBar','Parse error','err');$('metaEditor').className='meta-editor meta-invalid';$('metaSts').textContent='ERROR'}}
+$('metaEditor').oninput=valMeta;$('metaVal').onclick=valMeta;
+$('metaFmt').onclick=()=>{try{$('metaEditor').value=JSON.stringify(JSON.parse($('metaEditor').value),null,2);valMeta()}catch{showSt('metaStatusBar','Invalid JSON','err')}};
+$('metaCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('metaEditor').value);showSt('metaStatusBar','✓ Copied','ok')}catch{showSt('metaStatusBar','Failed','warn')}};
+$('metaDl').onclick=()=>{if(!$('metaEditor').value.trim())return;let n='metadata';try{n=(JSON.parse($('metaEditor').value).name||n).replace(/\s+/g,'_').toLowerCase()}catch{};dlBlob(new Blob([$('metaEditor').value],{type:'application/json'}),`${n}.json`)};
 
-document.getElementById('metaFormatBtn').addEventListener('click',()=>{
-  try{
-    metaEditor.value=JSON.stringify(JSON.parse(metaEditor.value),null,2);
-    validateMeta();
-  }catch(e){ showStatus('metaStatusBar','Cannot format invalid JSON: '+e.message,'err'); }
-});
+/* ══════════════════════════════════════
+   PROJECT SAVE/LOAD
+══════════════════════════════════════ */
+$('projSave').onclick=()=>{
+  const proj={
+    v:2,
+    layers:LAYERS.map(l=>({name:l.name,optional:l.optional,files:l.files.map(f=>({name:f.name,weight:f.weight,dataURL:f.dataURL}))})),
+    rules:RULES,
+    config:{name:$('cName').value,symbol:$('cSymbol').value,size:$('cSize').value,desc:$('cDesc').value,extUrl:$('cExtUrl').value,royalty:$('cRoyalty').value,creator:$('cCreator').value,share:$('cShare').value,startIdx:$('cStartIdx').value,imgSize:$('cImgSize').value,fmt:$('cFmt').value,pattern:$('cPattern').value,dupes:$('cDupes').checked}
+  };
+  dlBlob(new Blob([JSON.stringify(proj)],{type:'application/json'}),`${($('cName').value||'project').replace(/\s+/g,'_').toLowerCase()}_project.json`);
+  showSt('projStatus','✓ Project saved.','ok');
+};
+$('projLoad').onchange=e=>{
+  const f=e.target.files?.[0];if(!f)return;
+  const r=new FileReader;r.onload=async ev=>{
+    try{
+      const proj=JSON.parse(ev.target.result);
+      if(!proj.layers){throw new Error('Invalid project')}
+      /* Restore config */
+      const c=proj.config||{};
+      if(c.name)$('cName').value=c.name;if(c.symbol)$('cSymbol').value=c.symbol;if(c.size)$('cSize').value=c.size;
+      if(c.desc)$('cDesc').value=c.desc;if(c.extUrl)$('cExtUrl').value=c.extUrl;if(c.royalty)$('cRoyalty').value=c.royalty;
+      if(c.creator)$('cCreator').value=c.creator;if(c.share)$('cShare').value=c.share;if(c.startIdx)$('cStartIdx').value=c.startIdx;
+      if(c.imgSize)$('cImgSize').value=c.imgSize;if(c.fmt)$('cFmt').value=c.fmt;if(c.pattern)$('cPattern').value=c.pattern;
+      if(c.dupes!==undefined)$('cDupes').checked=c.dupes;
+      /* Restore layers with images */
+      LAYERS=[];
+      for(const layerData of proj.layers){
+        const layer={name:layerData.name,optional:layerData.optional||false,files:[]};
+        for(const fd of layerData.files){
+          const img=new Image;await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=fd.dataURL});
+          layer.files.push({name:fd.name,img,weight:fd.weight||50,dataURL:fd.dataURL});
+        }
+        LAYERS.push(layer);
+      }
+      RULES=proj.rules||[];
+      GEN=[];
+      renderLayers();renderRules();updateStats();
+      showSt('projStatus',`✓ Loaded: ${LAYERS.length} layers, ${RULES.length} rules.`,'ok');
+    }catch(err){showSt('projStatus','Load error: '+err.message,'err')}
+  };r.readAsText(f);e.target.value='';
+};
 
-document.getElementById('metaCopyBtn').addEventListener('click',async()=>{
-  try{
-    await navigator.clipboard.writeText(metaEditor.value);
-    showStatus('metaStatusBar','✓ Copied to clipboard','ok');
-  }catch{ showStatus('metaStatusBar','Copy failed — select and copy manually','warn'); }
-});
-
-document.getElementById('metaDownBtn').addEventListener('click',()=>{
-  if(!metaEditor.value.trim()){ showStatus('metaStatusBar','Nothing to download','warn'); return; }
-  let name='metadata';
-  try{ const obj=JSON.parse(metaEditor.value); name=(obj.name||'metadata').replace(/\s+/g,'_').toLowerCase(); }catch{}
-  downloadBlob(new Blob([metaEditor.value],{type:'application/json'}),`${name}.json`);
-  showStatus('metaStatusBar','✓ Downloaded','ok');
-});
-
-// ─── init ───
-updateStats();
+/* ══ INIT ══ */
+updateStats();renderRules();
 </script>
 </body>
 </html>
