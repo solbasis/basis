@@ -941,6 +941,113 @@ $('exportZipBtn').onclick=async()=>{await doExport('full')};
 $('exportMetaBtn').onclick=async()=>{await doExport('meta')};
 $('exportImgBtn').onclick=async()=>{await doExport('img')};
 
+/*
+ * STREAMING ZIP BUILDER
+ * Writes ZIP entries directly into a parts[] array as each file is rendered.
+ * No accumulation step. No JSZip.generateAsync bottleneck.
+ * Uses STORE (no compression) — images are already compressed.
+ * Produces valid ZIP files that open on Windows/Mac/Linux.
+ */
+class StreamZip {
+  constructor(){ this.parts=[]; this.centralDir=[]; this.offset=0; this.count=0; }
+
+  _dos(date){
+    const d=date||new Date();
+    const time=((d.getHours()&0x1f)<<11)|((d.getMinutes()&0x3f)<<5)|((d.getSeconds()>>1)&0x1f);
+    const dt=(((d.getFullYear()-1980)&0x7f)<<9)|((d.getMonth()+1)<<5)|(d.getDate()&0x1f);
+    return {time,date:dt};
+  }
+
+  _crc32(buf){
+    let crc=0xFFFFFFFF;
+    const u8=new Uint8Array(buf);
+    if(!StreamZip._table){
+      const t=new Uint32Array(256);
+      for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c}
+      StreamZip._table=t;
+    }
+    const t=StreamZip._table;
+    for(let i=0;i<u8.length;i++) crc=t[(crc^u8[i])&0xFF]^(crc>>>8);
+    return (crc^0xFFFFFFFF)>>>0;
+  }
+
+  _u16(v){return new Uint8Array([v&0xff,(v>>8)&0xff])}
+  _u32(v){return new Uint8Array([v&0xff,(v>>8)&0xff,(v>>16)&0xff,(v>>24)&0xff])}
+
+  addFile(name, data){
+    const enc=new TextEncoder();
+    const nameBytes=enc.encode(name);
+    const buf=data instanceof ArrayBuffer?data:new TextEncoder().encode(data);
+    const u8=new Uint8Array(buf);
+    const crc=this._crc32(buf);
+    const size=u8.length;
+    const {time,date}=this._dos();
+    const localOffset=this.offset;
+
+    // Local file header (30 + nameLen)
+    const localHeader=new Uint8Array(30);
+    const lv=new DataView(localHeader.buffer);
+    lv.setUint32(0,0x04034b50,true);   // signature
+    lv.setUint16(4,20,true);            // version needed
+    lv.setUint16(6,0,true);             // flags
+    lv.setUint16(8,0,true);             // compression: STORE
+    lv.setUint16(10,time,true);         // mod time
+    lv.setUint16(12,date,true);         // mod date
+    lv.setUint32(14,crc,true);          // crc32
+    lv.setUint32(18,size,true);         // compressed size
+    lv.setUint32(22,size,true);         // uncompressed size
+    lv.setUint16(26,nameBytes.length,true); // filename length
+    lv.setUint16(28,0,true);            // extra length
+
+    this.parts.push(localHeader, nameBytes, u8);
+    this.offset+=30+nameBytes.length+size;
+
+    // Central directory entry (46 + nameLen)
+    const cdEntry=new Uint8Array(46);
+    const cv=new DataView(cdEntry.buffer);
+    cv.setUint32(0,0x02014b50,true);    // signature
+    cv.setUint16(4,20,true);            // version made by
+    cv.setUint16(6,20,true);            // version needed
+    cv.setUint16(8,0,true);             // flags
+    cv.setUint16(10,0,true);            // compression: STORE
+    cv.setUint16(12,time,true);
+    cv.setUint16(14,date,true);
+    cv.setUint32(16,crc,true);
+    cv.setUint32(20,size,true);
+    cv.setUint32(24,size,true);
+    cv.setUint16(28,nameBytes.length,true);
+    cv.setUint16(30,0,true);            // extra length
+    cv.setUint16(32,0,true);            // comment length
+    cv.setUint16(34,0,true);            // disk start
+    cv.setUint16(36,0,true);            // internal attrs
+    cv.setUint32(38,0,true);            // external attrs
+    cv.setUint32(42,localOffset,true);  // local header offset
+
+    this.centralDir.push(cdEntry, nameBytes);
+    this.count++;
+  }
+
+  toBlob(){
+    const cdOffset=this.offset;
+    let cdSize=0;
+    for(const p of this.centralDir) cdSize+=p.length;
+
+    // End of central directory (22 bytes)
+    const eocd=new Uint8Array(22);
+    const ev=new DataView(eocd.buffer);
+    ev.setUint32(0,0x06054b50,true);
+    ev.setUint16(4,0,true);             // disk number
+    ev.setUint16(6,0,true);             // disk with CD
+    ev.setUint16(8,this.count,true);    // entries on disk
+    ev.setUint16(10,this.count,true);   // total entries
+    ev.setUint32(12,cdSize,true);       // CD size
+    ev.setUint32(16,cdOffset,true);     // CD offset
+    ev.setUint16(20,0,true);            // comment length
+
+    return new Blob([...this.parts,...this.centralDir,eocd],{type:'application/zip'});
+  }
+}
+
 async function doExport(mode){
   if(!GEN.length){showSt('expStatus','Generate first.','warn');return}
 
@@ -958,19 +1065,18 @@ async function doExport(mode){
   const startIdx=parseInt($('cStartIdx').value||0);
   const pattern=$('cPattern').value||'{name} #{n}';
   const mime=fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp';
-
-  const zip=new JSZip();
-  const imgFolder=(mode==='full'||mode==='img')?zip.folder('images'):null;
-  const metaFolder=(mode==='full'||mode==='meta')?zip.folder('metadata'):null;
+  const hasImg=mode==='full'||mode==='img';
+  const hasMeta=mode==='full'||mode==='meta';
 
   showProg('expProg');
-  setProg('expProgF','expProgP','expProgL',0,'Rendering images…');
+  setProg('expProgF','expProgP','expProgL',0,'Starting…');
   $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=true;
   hideSt('expStatus');
   $('expSts').textContent='EXPORTING';
 
-  // Render images — exact same pattern as original
-  if(imgFolder){
+  const zip=new StreamZip();
+
+  if(hasImg){
     const offCanvas=document.createElement('canvas');
     offCanvas.width=offCanvas.height=outSize;
     const offCtx=offCanvas.getContext('2d');
@@ -978,7 +1084,6 @@ async function doExport(mode){
     for(let i=0;i<GEN.length;i++){
       const item=GEN[i];
       const idx=startIdx+i;
-      const imgName=`${idx}.${ext}`;
 
       offCtx.clearRect(0,0,outSize,outSize);
       for(const layer of item.combo){
@@ -986,43 +1091,45 @@ async function doExport(mode){
       }
       const blob=await c2b(offCanvas,fmt,qual);
       const buf=await blob.arrayBuffer();
-      imgFolder.file(imgName,buf);
+
+      // Write directly into ZIP — no accumulation step later
+      zip.addFile(`images/${idx}.${ext}`,buf);
+
+      // Also write metadata inline if needed (avoids second pass)
+      if(hasMeta){
+        const meta=JSON.stringify(buildMeta(i),null,2);
+        zip.addFile(`metadata/${idx}.json`,meta);
+      }
 
       const pct=((i+1)/GEN.length)*100;
       setProg('expProgF','expProgP','expProgL',pct,`Exporting ${i+1}/${GEN.length}…`);
       if(i%10===0) await new Promise(r=>setTimeout(r,0));
     }
-  }
-
-  // Add metadata
-  if(metaFolder){
+    offCanvas.width=offCanvas.height=1;
+  } else if(hasMeta){
     for(let i=0;i<GEN.length;i++){
-      metaFolder.file(`${startIdx+i}.json`,JSON.stringify(buildMeta(i),null,2));
+      zip.addFile(`metadata/${startIdx+i}.json`,JSON.stringify(buildMeta(i),null,2));
     }
   }
 
-  // Collection-level metadata
-  const colMeta={
+  // Collection metadata
+  zip.addFile('collection.json',JSON.stringify({
     name:colName,symbol:colSymbol,description:colDesc,
     seller_fee_basis_points:royalty,image:'cover.png',external_url:extUrl,
     properties:{creators:creator?[{address:creator,share:creatorShare}]:[],category:'image'}
-  };
-  zip.file('collection.json',JSON.stringify(colMeta,null,2));
+  },null,2));
 
-  setProg('expProgF','expProgP','expProgL',100,'Packaging ZIP…');
-  await new Promise(r=>setTimeout(r,50));
+  // Finalize — instant, just concatenates existing parts
+  setProg('expProgF','expProgP','expProgL',100,'Finalizing…');
+  await new Promise(r=>setTimeout(r,10));
+  const zipBlob=zip.toBlob();
 
-  // STORE = no compression. PNG/JPEG/WebP are already compressed,
-  // so DEFLATE wastes minutes re-scanning them for 0% size gain.
-  // STORE writes raw bytes — finishes in seconds instead of minutes.
-  // ZIP file is the same size (±0.1%) and opens identically on all OS.
-  const zipBlob=await zip.generateAsync({type:'blob',compression:'STORE'});
   const suffix=mode==='meta'?'_metadata':mode==='img'?'_images':'_collection';
   dlBlob(zipBlob,`${colName.replace(/\s+/g,'_').toLowerCase()}${suffix}.zip`);
 
   $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=false;
   $('expSts').textContent='DONE';
-  showSt('expStatus',`✓ ZIP downloaded — ${GEN.length} items`,'ok');
+  showSt('expStatus',`✓ ZIP downloaded — ${GEN.length} items, ${(zipBlob.size/(1024*1024)).toFixed(1)} MB`,'ok');
 }
 
 /* ══════════════════════════════════════
