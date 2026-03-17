@@ -591,7 +591,50 @@ function hideSt(id){$(id)?.classList.remove('show')}
 function setProg(f,p,l,pct,lbl){const a=$(f),b=$(p),c=$(l);if(a)a.style.width=pct+'%';if(b)b.textContent=Math.round(pct)+'%';if(c&&lbl)c.textContent=lbl}
 function showProg(id){$(id)?.classList.add('show')}
 function hideProg(id){$(id)?.classList.remove('show')}
-function dlBlob(blob,name){const u=URL.createObjectURL(blob);const a=Object.assign(document.createElement('a'),{href:u,download:name});document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
+
+/*
+ * ROBUST DOWNLOAD
+ * 
+ * For large files: uses showSaveFilePicker (File System Access API)
+ * which streams the Blob directly to disk. No blob: URL, no size limit,
+ * no revocation race condition. Supported in Chrome 86+, Edge 86+.
+ *
+ * Fallback for Firefox/Safari/older browsers: uses blob: URL with
+ * delayed revocation (30 seconds) so the browser has time to write.
+ */
+async function dlBlob(blob,name){
+  // Try File System Access API first (Chrome/Edge)
+  if(window.showSaveFilePicker){
+    try{
+      const ext=name.split('.').pop().toLowerCase();
+      const types=[];
+      if(ext==='zip') types.push({description:'ZIP Archive',accept:{'application/zip':['.zip']}});
+      else if(ext==='json') types.push({description:'JSON',accept:{'application/json':['.json']}});
+      else if(ext==='png') types.push({description:'PNG Image',accept:{'image/png':['.png']}});
+      else if(ext==='jpg'||ext==='jpeg') types.push({description:'JPEG Image',accept:{'image/jpeg':['.jpg','.jpeg']}});
+      else if(ext==='webp') types.push({description:'WebP Image',accept:{'image/webp':['.webp']}});
+      
+      const handle=await window.showSaveFilePicker({suggestedName:name,types});
+      const writable=await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return; // Success — file written directly to disk
+    }catch(e){
+      // User cancelled the dialog, or API failed — fall through to legacy method
+      if(e.name==='AbortError') return; // User cancelled, don't fallback
+    }
+  }
+  
+  // Legacy fallback: blob URL with delayed revocation
+  const u=URL.createObjectURL(blob);
+  const a=Object.assign(document.createElement('a'),{href:u,download:name});
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Don't revoke immediately — give browser time to read the blob
+  // For a 1GB+ file, the browser needs significant time
+  setTimeout(()=>URL.revokeObjectURL(u), 60000);
+}
 function c2b(cv,fmt,q){return new Promise(r=>{cv.toBlob(b=>r(b),fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp',q/100)})}
 function getTier(pct){if(pct<3)return'legendary';if(pct<8)return'epic';if(pct<18)return'rare';if(pct<35)return'uncommon';return'common'}
 function tierLabel(t){return t.charAt(0).toUpperCase()+t.slice(1)}
@@ -1091,7 +1134,7 @@ async function doExport(mode){
     zip.addFile('collection.json',colMetaJSON);
     const b=zip.toBlob();
     const ps=(totalParts>0||!isFinal)?`_part${partNum}`:'';
-    dlBlob(b,`${baseName}${suffix}${ps}.zip`);
+    await dlBlob(b,`${baseName}${suffix}${ps}.zip`);
     partNum++;
     await new Promise(r=>setTimeout(r,400));
     zip=new StreamZip();filesInZip=0;
@@ -1132,7 +1175,7 @@ async function doExport(mode){
   await new Promise(r=>setTimeout(r,10));
   const zipBlob=zip.toBlob();
   const finalSuffix=totalParts>0?`_part${partNum}`:'';
-  dlBlob(zipBlob,`${baseName}${suffix}${finalSuffix}.zip`);
+  await dlBlob(zipBlob,`${baseName}${suffix}${finalSuffix}.zip`);
 
   $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=false;
   $('expSts').textContent='DONE';
