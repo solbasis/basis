@@ -258,6 +258,22 @@ hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
 .project-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:var(--a03);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:14px}
 .project-bar span{font-size:.62rem;color:var(--text-dim)}
 
+
+/* ─── HERO CHARACTERS ─── */
+.hero-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.hero-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,107,53,.25);border-radius:var(--r);padding:12px;position:relative}
+.hero-card:hover{border-color:rgba(255,107,53,.45)}
+.hero-card-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hero-card-name{flex:1;min-height:26px!important;padding:3px 7px!important;font-size:.72rem!important;font-weight:600!important;color:var(--legendary)!important;background:transparent!important;border-color:transparent!important}
+.hero-card-name:focus{border-color:rgba(255,107,53,.4)!important;background:rgba(0,0,0,.3)!important}
+.hero-card-badge{font-size:.52rem;padding:2px 7px;border-radius:8px;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3);color:var(--legendary);letter-spacing:.8px;font-weight:600;text-transform:uppercase}
+.hero-card-num{font-size:.56rem;color:var(--text-dim)}
+.hero-trait-grid{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.hero-trait-select{min-height:26px!important;padding:3px 7px!important;font-size:.62rem!important;flex:1;min-width:120px}
+.hero-preview-wrap{display:flex;align-items:center;gap:10px;margin-top:8px}
+.hero-preview-canvas{width:80px;height:80px;border-radius:var(--r-sm);border:1px solid rgba(255,107,53,.3);background:rgba(0,0,0,.4)}
+.hero-traits-summary{font-size:.58rem;color:var(--text-dim);line-height:1.6}
+
 @media(max-width:900px){
   .sidebar{display:none}
   .main{max-width:100%;padding:14px}
@@ -283,6 +299,7 @@ hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
     <button class="nav-item" data-page="layers"><span class="ni">◫</span>Layers & Traits</button>
     <button class="nav-item" data-page="rarity"><span class="ni">◆</span>Rarity System</button>
     <button class="nav-item" data-page="rules"><span class="ni">⚡</span>Trait Rules</button>
+    <button class="nav-item" data-page="heroes"><span class="ni">★</span>Hero Characters</button>
     <div class="nav-sep"></div>
     <button class="nav-item" data-page="generate"><span class="ni">▶</span>Generate</button>
     <button class="nav-item" data-page="preview"><span class="ni">◳</span>Preview & Filter</button>
@@ -302,6 +319,7 @@ hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
   <button class="m-tab" data-page="layers">Layers</button>
   <button class="m-tab" data-page="rarity">Rarity</button>
   <button class="m-tab" data-page="rules">Rules</button>
+  <button class="m-tab" data-page="heroes">Heroes</button>
   <button class="m-tab" data-page="generate">Gen</button>
   <button class="m-tab" data-page="preview">Preview</button>
   <button class="m-tab" data-page="export">Export</button>
@@ -433,6 +451,26 @@ hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
 </div>
 </div>
 
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGE: HERO CHARACTERS
+════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-heroes">
+<div class="page-hdr"><div><div class="page-title">> Hero Characters</div><div class="page-desc">Hand-pick trait combos for guaranteed 1-of-1 legendary pieces. These get indices #0, #1, #2… in the final collection.</div></div></div>
+<div class="panel">
+  <div class="pbar"><div class="pbar-l"><div class="pdots"><span class="pdot"></span><span class="pdot"></span><span class="pdot"></span></div><div class="plbl">Hero Builder</div></div><div class="psts" id="heroSts">0 Heroes</div></div>
+  <p style="font-size:.64rem;color:var(--text-dim);margin-bottom:10px">Select one trait per layer for each hero. Heroes are injected at the start of your collection (before randomly generated NFTs) and are guaranteed to appear. Leave a layer blank to skip it for that hero.</p>
+  <div class="hero-list" id="heroList"></div>
+  <div class="btn-row">
+    <button class="btn btn-p" id="addHeroBtn">★ Add Hero</button>
+    <button class="btn btn-sm" id="addHeroBulkBtn">★ Add 10 Heroes</button>
+    <button class="btn btn-sm" id="dupeHeroBtn">Duplicate Last</button>
+    <button class="btn btn-sm btn-d" id="clearHeroesBtn">Clear All</button>
+  </div>
+  <div class="status-bar" id="heroStatus"></div>
+</div>
+</div>
+
 <!-- ════════════════════════════════════════════════════════════════
      PAGE: GENERATE
 ════════════════════════════════════════════════════════════════ -->
@@ -447,6 +485,7 @@ hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
       <div class="kv-row"><span class="kv-k">Max Unique</span><span class="kv-v" id="stC">0</span></div>
       <div class="kv-row"><span class="kv-k">Target</span><span class="kv-v" id="stTgt">100</span></div>
       <div class="kv-row"><span class="kv-k">Rules</span><span class="kv-v" id="stR">0</span></div>
+      <div class="kv-row"><span class="kv-k">Heroes (1-of-1)</span><span class="kv-v" id="stH" style="color:var(--legendary)">0</span></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
       <button class="btn btn-p btn-full" id="generateBtn" style="font-size:.72rem;min-height:40px">▶ GENERATE COLLECTION</button>
@@ -582,7 +621,7 @@ hr{border:none;border-top:1px dashed var(--border);margin:12px 0}
 /* ══════════════════════════════════════
    GLOBALS
 ══════════════════════════════════════ */
-let LAYERS=[],RULES=[],GEN=[],curPage=0,modalIdx=-1;
+let LAYERS=[],RULES=[],HEROES=[],GEN=[],curPage=0,modalIdx=-1;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -647,6 +686,7 @@ function nav(p){
   document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===`page-${p}`));
   if(p==='rarity')renderRarity();
   if(p==='generate'||p==='preview')updateStats();
+  if(p==='heroes')renderHeroes();
   if(p==='export'&&typeof updateEstimator==='function')updateEstimator();
 }
 document.querySelectorAll('.nav-item,.m-tab').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.page)));
@@ -679,11 +719,12 @@ function updateStats(){
   if($('stC'))$('stC').textContent=combos.toLocaleString();
   if($('stTgt'))$('stTgt').textContent=$('cSize').value;
   if($('stR'))$('stR').textContent=RULES.length;
+  if($('stH'))$('stH').textContent=HEROES.length;
   $('layerSts').textContent=`${n} Layer${n!==1?'s':''}`;
 }
 $('cSize').oninput=updateStats;
 $('addLayerBtn').onclick=()=>{LAYERS.push({name:`Layer ${LAYERS.length+1}`,optional:false,files:[]});renderLayers();updateStats()};
-$('clearLayersBtn').onclick=()=>{if(!LAYERS.length||confirm('Clear all?')){LAYERS=[];RULES=[];GEN=[];renderLayers();updateStats()}};
+$('clearLayersBtn').onclick=()=>{if(!LAYERS.length||confirm('Clear all?')){LAYERS=[];RULES=[];HEROES=[];GEN=[];renderLayers();updateStats()}};
 
 /* ─ Layer drag reorder ─ */
 let dragLayerIdx=null;
@@ -857,16 +898,163 @@ function checkRules(traits){
   }return true;
 }
 
+
+/* ══════════════════════════════════════
+   HERO CHARACTERS — Guaranteed 1-of-1s
+══════════════════════════════════════ */
+function heroName(idx){
+  const colName=$('cName').value||'Collection';
+  const pattern=$('cPattern').value||'{name} #{n}';
+  const startIdx=parseInt($('cStartIdx').value)||0;
+  return pattern.replace('{name}',colName).replace('{n}',startIdx+idx);
+}
+
+$('addHeroBtn').onclick=()=>{
+  if(!LAYERS.length||!LAYERS.some(l=>l.files.length)){showSt('heroStatus','Add layers & traits first.','warn');return}
+  const hi=HEROES.length;
+  const hero={name:heroName(hi),traits:{}};
+  // Auto-pick: hero 0 gets trait[0], hero 1 gets trait[1], etc. Cycles if more heroes than traits.
+  LAYERS.forEach(l=>{if(l.files.length)hero.traits[l.name]=l.files[hi%l.files.length].name});
+  HEROES.push(hero);
+  renderHeroes();updateStats();
+};
+
+$('dupeHeroBtn').onclick=()=>{
+  if(!HEROES.length){showSt('heroStatus','Add a hero first.','warn');return}
+  const last=HEROES[HEROES.length-1];
+  HEROES.push({name:heroName(HEROES.length),traits:{...last.traits}});
+  renderHeroes();updateStats();
+};
+
+$('addHeroBulkBtn').onclick=()=>{
+  if(!LAYERS.length||!LAYERS.some(l=>l.files.length)){showSt('heroStatus','Add layers & traits first.','warn');return}
+  for(let b=0;b<10;b++){
+    const hi=HEROES.length;
+    const hero={name:heroName(hi),traits:{}};
+    LAYERS.forEach(l=>{if(l.files.length)hero.traits[l.name]=l.files[hi%l.files.length].name});
+    HEROES.push(hero);
+  }
+  renderHeroes();updateStats();
+  showSt('heroStatus',`✓ Added 10 heroes (${HEROES.length} total)`,'ok');
+};
+
+$('clearHeroesBtn').onclick=()=>{
+  if(!HEROES.length||confirm('Clear all heroes?')){HEROES=[];renderHeroes();updateStats()}
+};
+
+function renderHeroes(){
+  const list=$('heroList');
+  $('heroSts').textContent=`${HEROES.length} Hero${HEROES.length!==1?'es':''}`;
+  if(!HEROES.length){list.innerHTML='<div style="color:var(--text-mute);font-size:.66rem;padding:12px;text-align:center">No heroes yet. Add one to guarantee specific trait combinations.</div>';return}
+  
+  list.innerHTML='';
+  HEROES.forEach((hero,hi)=>{
+    const card=document.createElement('div');
+    card.className='hero-card';
+    
+    // Build trait selectors
+    let selectsHTML='';
+    LAYERS.forEach(layer=>{
+      if(!layer.files.length)return;
+      const opts=layer.files.map(f=>`<option value="${esc(f.name)}" ${hero.traits[layer.name]===f.name?'selected':''}>${esc(f.name)}</option>`).join('');
+      selectsHTML+=`<div class="field" style="margin-bottom:6px;flex:1;min-width:140px">
+        <label style="font-size:.54rem">${esc(layer.name)}</label>
+        <select class="hero-trait-select" data-hi="${hi}" data-layer="${esc(layer.name)}">${layer.optional?'<option value="">None</option>':''}${opts}</select>
+      </div>`;
+    });
+    
+    card.innerHTML=`
+      <div class="hero-card-hdr">
+        <input type="text" class="hero-card-name" value="${esc(hero.name)}" data-hni="${hi}">
+        <span class="hero-card-badge">★ 1-of-1</span>
+        <span class="hero-card-num">#${hi}</span>
+        <button class="btn btn-xs" data-hmu="${hi}" title="Move up">↑</button>
+        <button class="btn btn-xs" data-hmd="${hi}" title="Move down">↓</button>
+        <button class="btn btn-xs btn-d" data-hrm="${hi}">✕</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${selectsHTML}</div>
+      <div class="hero-preview-wrap">
+        <canvas class="hero-preview-canvas" id="heroCanvas_${hi}" width="80" height="80"></canvas>
+        <div class="hero-traits-summary" id="heroSummary_${hi}"></div>
+      </div>`;
+    list.appendChild(card);
+    
+    // Render preview
+    renderHeroPreview(hi);
+    
+    // Events
+    card.querySelector(`[data-hni="${hi}"]`).oninput=e=>{HEROES[hi].name=e.target.value};
+    card.querySelector(`[data-hmu="${hi}"]`).onclick=()=>{if(hi>0){[HEROES[hi],HEROES[hi-1]]=[HEROES[hi-1],HEROES[hi]];renderHeroes()}};
+    card.querySelector(`[data-hmd="${hi}"]`).onclick=()=>{if(hi<HEROES.length-1){[HEROES[hi],HEROES[hi+1]]=[HEROES[hi+1],HEROES[hi]];renderHeroes()}};
+    card.querySelector(`[data-hrm="${hi}"]`).onclick=()=>{HEROES.splice(hi,1);renderHeroes();updateStats()};
+    card.querySelectorAll('.hero-trait-select').forEach(sel=>{
+      sel.onchange=e=>{
+        const layer=e.target.dataset.layer;
+        HEROES[hi].traits[layer]=e.target.value||null;
+        renderHeroPreview(hi);
+      };
+    });
+  });
+}
+
+function renderHeroPreview(hi){
+  const hero=HEROES[hi];
+  const cv=$(`heroCanvas_${hi}`);
+  const summary=$(`heroSummary_${hi}`);
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,80,80);
+  
+  let summaryText=[];
+  LAYERS.forEach(layer=>{
+    const traitName=hero.traits[layer.name];
+    if(!traitName){summaryText.push(`${layer.name}: None`);return}
+    const file=layer.files.find(f=>f.name===traitName);
+    if(file&&file.img){
+      ctx.drawImage(file.img,0,0,80,80);
+    }
+    summaryText.push(`${layer.name}: ${traitName}`);
+  });
+  if(summary)summary.innerHTML=summaryText.join('<br>');
+}
+
+// Build a GEN-compatible item from a hero
+function heroToGenItem(hero){
+  const traits={};
+  const combo=[];
+  LAYERS.forEach(layer=>{
+    const traitName=hero.traits[layer.name];
+    if(!traitName||traitName===''){
+      traits[layer.name]=null;
+      combo.push(null);
+    }else{
+      const file=layer.files.find(f=>f.name===traitName);
+      traits[layer.name]=traitName;
+      combo.push(file||null);
+    }
+  });
+  return {traits,combo,isHero:true,heroName:hero.name};
+}
+
 $('generateBtn').onclick=async()=>{
   if(!LAYERS.length){showSt('genStatus','Add layers first.','warn');return}
   if(!LAYERS.every(l=>l.files.length)){showSt('genStatus','Every layer needs traits.','warn');return}
   const target=parseInt($('cSize').value)||100,dupes=$('cDupes').checked;
   const combos=LAYERS.reduce((p,l)=>p*(l.files.length+(l.optional?1:0)),1);
   if(!dupes&&target>combos){showSt('genStatus',`Only ${combos.toLocaleString()} unique combos. Enable dupes or add traits.`,'warn');return}
-  GEN=[];hideSt('genStatus');showProg('genProg');setProg('genProgF','genProgP','genProgL',0,'Generating…');
+  GEN=[];hideSt('genStatus');showProg('genProg');setProg('genProgF','genProgP','genProgL',0,'Injecting heroes…');
+  // Inject hero characters first — guaranteed slots #0, #1, #2...
+  const heroKeys=new Set();
+  for(const hero of HEROES){
+    const item=heroToGenItem(hero);
+    const key=JSON.stringify(item.traits);
+    heroKeys.add(key);
+    GEN.push(item);
+  }
+  if(HEROES.length)setProg('genProgF','genProgP','genProgL',1,`${HEROES.length} heroes injected, generating randoms…`);
   $('generateBtn').disabled=true;$('genSts').textContent='RUNNING';
   $('exportZipBtn').disabled=$('exportMetaBtn').disabled=$('exportImgBtn').disabled=true;
-  const seen=new Set;let att=0;const maxAtt=target*80;
+  const seen=new Set(heroKeys);let att=0;const maxAtt=target*80;
   while(GEN.length<target&&att<maxAtt){
     att++;const traits={},combo=[];
     for(const layer of LAYERS){
@@ -1211,6 +1399,7 @@ $('projSave').onclick=()=>{
     v:2,
     layers:LAYERS.map(l=>({name:l.name,optional:l.optional,files:l.files.map(f=>({name:f.name,weight:f.weight,dataURL:f.dataURL}))})),
     rules:RULES,
+    heroes:HEROES,
     config:{name:$('cName').value,symbol:$('cSymbol').value,size:$('cSize').value,desc:$('cDesc').value,extUrl:$('cExtUrl').value,royalty:$('cRoyalty').value,creator:$('cCreator').value,share:$('cShare').value,startIdx:$('cStartIdx').value,imgSize:$('cImgSize').value,fmt:$('cFmt').value,pattern:$('cPattern').value,dupes:$('cDupes').checked}
   };
   dlBlob(new Blob([JSON.stringify(proj)],{type:'application/json'}),`${($('cName').value||'project').replace(/\s+/g,'_').toLowerCase()}_project.json`);
@@ -1240,9 +1429,10 @@ $('projLoad').onchange=e=>{
         LAYERS.push(layer);
       }
       RULES=proj.rules||[];
+      HEROES=proj.heroes||[];
       GEN=[];
-      renderLayers();renderRules();updateStats();
-      showSt('projStatus',`✓ Loaded: ${LAYERS.length} layers, ${RULES.length} rules.`,'ok');
+      renderLayers();renderRules();renderHeroes();updateStats();
+      showSt('projStatus',`✓ Loaded: ${LAYERS.length} layers, ${RULES.length} rules, ${HEROES.length} heroes.`,'ok');
     }catch(err){showSt('projStatus','Load error: '+err.message,'err')}
   };r.readAsText(f);e.target.value='';
 };
